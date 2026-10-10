@@ -1,61 +1,71 @@
 import type { GarmentItem } from './types';
+import type { ScanResult, ResolveResult, EchoResult } from './types';
+
 
 const BASE_URL = 'http://152.23.49.69:8000';
 // const BASE_URL = '/vision-api';
 
-
-export async function uploadFrame(file: File): Promise<GarmentItem> {
-  const formData = new FormData();
-  formData.append('file', file);
-  const res = await fetch(`${BASE_URL}/scan/frame`, { method: 'POST', body: formData });
-  if (!res.ok) throw new Error(`Upload failed: ${res.status} ${res.statusText}`);
-  return res.json();
+export function getSessionId(): string {
+  let id = localStorage.getItem('garmentSessionId');
+  if (!id) {
+    id = crypto.randomUUID?.() ?? Math.random().toString(36).slice(2) + Date.now().toString(36);
+    localStorage.setItem('garmentSessionId', id);
+  }
+  return id;
 }
 
-export async function resolvePending(pendingId: string): Promise<GarmentItem> {
-  const res = await fetch(`${BASE_URL}/scan/pending/${pendingId}/resolve`, { method: 'POST' });
-  if (!res.ok) throw new Error(`Resolve failed: ${res.status}`);
-  return res.json();
+async function request<T>(path: string, init?: RequestInit): Promise<T> {
+  const res = await fetch(`${BASE_URL}${path}`, init);
+  if (!res.ok) {
+    const body = await res.text();
+    throw new Error(`${init?.method ?? 'GET'} ${path} -> ${res.status}: ${body.slice(0, 300)}`);
+  }
+  return res.json() as Promise<T>;
 }
 
-export async function listItems(): Promise<GarmentItem[]> {
-  const res = await fetch(`${BASE_URL}/items`);
-  if (!res.ok) throw new Error(`Failed to list items: ${res.status}`);
-  return res.json();
+export function buildScanForm(file: Blob, sessionId = getSessionId()): FormData {
+  const form = new FormData();
+  form.append('session_id', sessionId);
+  form.append('image', file, file instanceof File ? file.name : 'frame.jpg');
+  return form;
 }
 
-export async function getItem(itemId: string): Promise<GarmentItem> {
-  const res = await fetch(`${BASE_URL}/items/${itemId}`);
-  if (!res.ok) throw new Error(`Failed to get item: ${res.status}`);
-  return res.json();
-}
+export const uploadFrame = (file: Blob) =>
+  request<ScanResult>('/scan/frame', { method: 'POST', body: buildScanForm(file) });
 
-export async function patchItem(itemId: string, data: Partial<GarmentItem>): Promise<GarmentItem> {
-  const res = await fetch(`${BASE_URL}/items/${itemId}`, {
+export const listItems = () => request<GarmentItem[]>('/items');
+
+export const getItem = (id: string) => request<GarmentItem>(`/items/${id}`);
+
+export const patchItem = (id: string, data: Partial<GarmentItem>) =>
+  request<GarmentItem>(`/items/${id}`, {
     method: 'PATCH',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(data),
   });
-  if (!res.ok) throw new Error(`Failed to patch item: ${res.status}`);
-  return res.json();
-}
 
-export async function approveItem(itemId: string): Promise<void> {
-  const res = await fetch(`${BASE_URL}/items/${itemId}/approve`, { method: 'POST' });
-  if (!res.ok) throw new Error(`Failed to approve: ${res.status}`);
-}
+export const approveItem = (id: string) =>
+  request<GarmentItem>(`/items/${id}/approve`, { method: 'POST' });
 
-export async function discardItem(itemId: string): Promise<void> {
-  const res = await fetch(`${BASE_URL}/items/${itemId}/discard`, { method: 'POST' });
-  if (!res.ok) throw new Error(`Failed to discard: ${res.status}`);
-}
+export const discardItem = (id: string) =>
+  request<GarmentItem>(`/items/${id}/discard`, { method: 'POST' });
 
-export async function retryItem(itemId: string): Promise<GarmentItem> {
-  const res = await fetch(`${BASE_URL}/items/${itemId}/retry`, { method: 'POST' });
-  if (!res.ok) throw new Error(`Failed to retry: ${res.status}`);
-  return res.json();
-}
+export const retryItem = (id: string) =>
+  request<GarmentItem>(`/items/${id}/retry`, { method: 'POST' });
+
+export const resolvePending = (pendingId: string, action: 'add' | 'dismiss') =>
+  request<ResolveResult>(`/scan/pending/${pendingId}/resolve`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ action }),
+  });
 
 export function getItemImageUrl(itemId: string, viewIndex = 0): string {
   return `${BASE_URL}/items/${itemId}/image/${viewIndex}`;
 }
+
+// Diagnostics
+export const echoTest = (file: Blob) =>
+  request<EchoResult>('/debug/echo', { method: 'POST', body: buildScanForm(file) });
+
+export const getServerStatus = () => request<unknown>('/debug/status');
