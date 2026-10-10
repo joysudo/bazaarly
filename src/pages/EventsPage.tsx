@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import {
-  collection, addDoc, deleteDoc, getDocs, doc, updateDoc, query, where, orderBy, writeBatch,
+  arrayRemove, arrayUnion, collection, addDoc, deleteDoc, getDocs, doc, updateDoc, query, where, orderBy, writeBatch,
 } from 'firebase/firestore';
 import { db } from '../lib/firebase';
 import type { BazaarlyEvent } from '../lib/types';
@@ -10,6 +10,7 @@ import { CreateEventModal } from '../components/events/CreateEventModal';
 import { EventDashboard } from '../components/events/EventDashboard';
 
 type EventDraft = Omit<BazaarlyEvent, 'id' | 'createdAt' | 'inventoryIds' | 'grossRevenue' | 'status'>;
+type NewEventDraft = Pick<EventDraft, 'name' | 'date' | 'description' | 'vendorFee'>;
 
 interface EventsPageProps {
   selectedEvent: BazaarlyEvent | null;
@@ -78,6 +79,60 @@ export function EventsPage({ selectedEvent, onSelectEvent, onCloseDashboard }: E
     await loadEvents();
   }
 
+  async function handleTransferInventory(
+    sourceEvent: BazaarlyEvent,
+    targetEventId: string | null,
+    newEvent?: NewEventDraft,
+  ) {
+    const inventorySnapshot = await getDocs(query(
+      collection(db, 'inventory'),
+      where('eventId', '==', sourceEvent.id),
+    ));
+    const unsoldItems = inventorySnapshot.docs.filter(item => item.data().status !== 'sold');
+    if (unsoldItems.length === 0) {
+      throw new Error('There is no unsold inventory to transfer.');
+    }
+    if (unsoldItems.length > 498) {
+      throw new Error('This event has too many items to transfer in one operation (maximum 498).');
+    }
+
+    const batch = writeBatch(db);
+    let targetRef;
+    if (newEvent) {
+      if (!newEvent.name.trim() || !newEvent.date || new Date(newEvent.date) <= new Date()) {
+        throw new Error('Enter a name and a future date for the new event.');
+      }
+      if (!Number.isFinite(newEvent.vendorFee) || newEvent.vendorFee < 0) {
+        throw new Error('Enter a valid vendor fee for the new event.');
+      }
+      targetRef = doc(collection(db, 'events'));
+      batch.set(targetRef, {
+        ...newEvent,
+        name: newEvent.name.trim(),
+        status: 'upcoming',
+        inventoryIds: unsoldItems.map(item => item.id),
+        grossRevenue: 0,
+        createdAt: new Date().toISOString(),
+      });
+    } else if (targetEventId) {
+      const target = events.find(event => event.id === targetEventId);
+      if (!target || target.status !== 'upcoming' || target.id === sourceEvent.id) {
+        throw new Error('Choose a different upcoming event.');
+      }
+      targetRef = doc(db, 'events', target.id);
+      batch.update(targetRef, { inventoryIds: arrayUnion(...unsoldItems.map(item => item.id)) });
+    } else {
+      throw new Error('Choose an upcoming event or create a new one.');
+    }
+
+    unsoldItems.forEach(item => batch.update(item.ref, { eventId: targetRef.id }));
+    batch.update(doc(db, 'events', sourceEvent.id), {
+      inventoryIds: arrayRemove(...unsoldItems.map(item => item.id)),
+    });
+    await batch.commit();
+    await loadEvents();
+  }
+
   const upcoming = events.filter(e => e.status === 'upcoming');
   const past = events.filter(e => e.status === 'past');
 
@@ -89,6 +144,8 @@ export function EventsPage({ selectedEvent, onSelectEvent, onCloseDashboard }: E
         onMarkComplete={() => handleMarkComplete(selectedEvent)}
         onReturnInventory={selectedEvent.inventoryIds.length > 0 ? () => handleReturnInventory(selectedEvent) : undefined}
         onDeleteEvent={() => handleDeleteEvent(selectedEvent)}
+        upcomingEvents={events.filter(event => event.status === 'upcoming' && event.id !== selectedEvent.id)}
+        onTransferInventory={(targetEventId, newEvent) => handleTransferInventory(selectedEvent, targetEventId, newEvent)}
       />
     );
   }
