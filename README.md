@@ -15,6 +15,8 @@ The Events page shows event finances and sales counts directly on each event til
 
 Events can be deleted from their dashboard after confirmation. Deleting an event unassigns its unsold inventory and preserves sold inventory and sales history.
 
+From an event dashboard, transfer all unsold inventory to another upcoming event or create a new upcoming event as the destination. Sold inventory and sales history remain associated with the original event.
+
 See the Solana checkout repo's README for payment configuration and behavior.
 
 ## Build and lint

@@ -5,14 +5,20 @@ import { db } from '../../lib/firebase';
 import { Modal } from '../ui/Modal';
 import { Button } from '../ui/Button';
 import { Badge } from '../ui/Badge';
+import { Input, TextArea } from '../ui/Input';
 import type { BazaarlyEvent, EventSale, InventoryItem } from '../../lib/types';
 
 interface EventDashboardProps {
   event: BazaarlyEvent;
+  upcomingEvents: BazaarlyEvent[];
   onClose: () => void;
   onMarkComplete: () => Promise<void>;
   onReturnInventory?: () => Promise<void>;
   onDeleteEvent: () => Promise<void>;
+  onTransferInventory: (
+    targetEventId: string | null,
+    newEvent?: Pick<BazaarlyEvent, 'name' | 'date' | 'description' | 'vendorFee'>,
+  ) => Promise<void>;
 }
 
 interface DashboardData {
@@ -22,10 +28,24 @@ interface DashboardData {
   error?: string;
 }
 
-export function EventDashboard({ event, onClose, onMarkComplete, onReturnInventory, onDeleteEvent }: EventDashboardProps) {
+export function EventDashboard({
+  event,
+  upcomingEvents,
+  onClose,
+  onMarkComplete,
+  onReturnInventory,
+  onDeleteEvent,
+  onTransferInventory,
+}: EventDashboardProps) {
   const [loadingAction, setLoadingAction] = useState<string | null>(null);
   const [actionError, setActionError] = useState('');
   const [confirmDelete, setConfirmDelete] = useState(false);
+  const [showTransfer, setShowTransfer] = useState(false);
+  const [transferTarget, setTransferTarget] = useState('');
+  const [newEventName, setNewEventName] = useState('');
+  const [newEventDate, setNewEventDate] = useState('');
+  const [newEventDescription, setNewEventDescription] = useState('');
+  const [newEventVendorFee, setNewEventVendorFee] = useState('0');
   const [dashboard, setDashboard] = useState<DashboardData | null>(null);
   const [reloadCount, setReloadCount] = useState(0);
   const date = new Date(event.date);
@@ -75,6 +95,7 @@ export function EventDashboard({ event, onClose, onMarkComplete, onReturnInvento
   ), 0);
   const itemsSold = Math.max(soldInventoryCount, itemsSoldFromSales);
   const availableInventoryCount = inventory.filter(item => item.status === 'approved').length;
+  const transferableInventoryCount = inventory.filter(item => item.status !== 'sold').length;
   const sellThrough = inventory.length > 0 ? Math.min(100, Math.round((itemsSold / inventory.length) * 100)) : 0;
   const net = event.grossRevenue - event.vendorFee;
   const averageSale = sales.length > 0 ? event.grossRevenue / sales.length : 0;
@@ -87,6 +108,41 @@ export function EventDashboard({ event, onClose, onMarkComplete, onReturnInvento
       onClose();
     } catch (error) {
       setActionError(error instanceof Error ? error.message : 'The event action failed. Please try again.');
+    } finally {
+      setLoadingAction(null);
+    }
+  }
+
+  async function handleTransfer() {
+    setLoadingAction('transfer');
+    setActionError('');
+    try {
+      if (transferTarget === '__new__') {
+        if (!newEventVendorFee.trim()) {
+          throw new Error('Enter a vendor fee for the new event.');
+        }
+        const vendorFee = Number(newEventVendorFee);
+        if (!Number.isFinite(vendorFee) || vendorFee < 0) {
+          throw new Error('Enter a valid vendor fee.');
+        }
+        await onTransferInventory(null, {
+          name: newEventName,
+          date: newEventDate,
+          description: newEventDescription,
+          vendorFee,
+        });
+      } else {
+        await onTransferInventory(transferTarget || null);
+      }
+      setShowTransfer(false);
+      setTransferTarget('');
+      setNewEventName('');
+      setNewEventDate('');
+      setNewEventDescription('');
+      setNewEventVendorFee('0');
+      setReloadCount(count => count + 1);
+    } catch (error) {
+      setActionError(error instanceof Error ? error.message : 'Could not transfer inventory.');
     } finally {
       setLoadingAction(null);
     }
@@ -214,6 +270,15 @@ export function EventDashboard({ event, onClose, onMarkComplete, onReturnInvento
           >
             Delete event
           </Button>
+          {transferableInventoryCount > 0 && (
+            <Button
+              variant="secondary"
+              onClick={() => setShowTransfer(true)}
+              disabled={loadingAction !== null}
+            >
+              Transfer Inventory ({transferableInventoryCount})
+            </Button>
+          )}
           {!isPast && onReturnInventory && (
             <Button
               variant="secondary"
@@ -255,6 +320,68 @@ export function EventDashboard({ event, onClose, onMarkComplete, onReturnInvento
               disabled={loadingAction !== null}
             >
               {loadingAction === 'delete' ? 'Deleting…' : 'Delete event'}
+            </Button>
+          </div>
+        </div>
+      </Modal>
+      <Modal open={showTransfer} onClose={() => setShowTransfer(false)} title="Transfer unsold inventory">
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-md)' }}>
+          <p style={{ margin: 0, fontSize: 'var(--text-body-sm)', lineHeight: 1.5 }}>
+            Move {transferableInventoryCount} unsold {transferableInventoryCount === 1 ? 'item' : 'items'} from <strong>{event.name}</strong>. Sold inventory and sales history stay with this event.
+          </p>
+          <label style={{ display: 'flex', flexDirection: 'column', gap: 6, fontSize: 'var(--text-body-sm)', fontWeight: 480 }}>
+            Destination event
+            <select
+              value={transferTarget}
+              onChange={e => setTransferTarget(e.target.value)}
+              style={{ padding: '12px 14px', border: '1.5px solid var(--color-hairline)', borderRadius: 'var(--radius-md)', background: 'var(--color-canvas)', color: 'var(--color-ink)', font: 'inherit' }}
+            >
+              <option value="">Choose an upcoming event</option>
+              {upcomingEvents.map(target => <option key={target.id} value={target.id}>{target.name}</option>)}
+              <option value="__new__">Create a new event…</option>
+            </select>
+          </label>
+          {transferTarget === '__new__' && (
+            <>
+              <Input
+                label="Event name"
+                value={newEventName}
+                onChange={e => setNewEventName(e.target.value)}
+                required
+              />
+              <Input
+                label="Date and time"
+                type="datetime-local"
+                value={newEventDate}
+                onChange={e => setNewEventDate(e.target.value)}
+                required
+              />
+              <TextArea
+                label="Description"
+                value={newEventDescription}
+                onChange={e => setNewEventDescription(e.target.value)}
+              />
+              <Input
+                label="Vendor fee ($)"
+                type="number"
+                min="0"
+                step="0.01"
+                value={newEventVendorFee}
+                onChange={e => setNewEventVendorFee(e.target.value)}
+                required
+              />
+            </>
+          )}
+          <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 'var(--space-sm)' }}>
+            <Button variant="secondary" onClick={() => setShowTransfer(false)} disabled={loadingAction !== null}>
+              Cancel
+            </Button>
+            <Button
+              variant="primary"
+              onClick={handleTransfer}
+              disabled={loadingAction !== null || transferableInventoryCount === 0 || !transferTarget}
+            >
+              {loadingAction === 'transfer' ? 'Transferring…' : 'Transfer inventory'}
             </Button>
           </div>
         </div>
