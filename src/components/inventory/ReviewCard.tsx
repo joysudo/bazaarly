@@ -23,6 +23,7 @@ export function ReviewCard({ item, events, onApprove, onDiscard, onRetry }: Revi
   const [eventId, setEventId] = useState<string | null>(null);
   const [colorInput, setColorInput] = useState('');
   const [keywordInput, setKeywordInput] = useState('');
+  const [priceError, setPriceError] = useState('');
   const [busy, setBusy] = useState<'approve' | 'discard' | 'retry' | null>(null);
 
   const overview = desc?.overview ?? '';
@@ -56,8 +57,14 @@ export function ReviewCard({ item, events, onApprove, onDiscard, onRetry }: Revi
   }
 
   function handleApprove() {
+    const parsedPrice = Number(price);
+    if (!price.trim() || !Number.isFinite(parsedPrice) || Math.round(parsedPrice * 100) <= 0) {
+      setPriceError('Enter a price of at least $0.01 before approving this item.');
+      return;
+    }
+    setPriceError('');
     wrap('approve', () => onApprove({
-      price: parseFloat(price) || 0,
+      price: parsedPrice,
       title: title.trim() || overview.slice(0, 60) || 'Untitled',
       garmentType: garmentType.trim(),
       mainColors: colors,
@@ -111,12 +118,17 @@ export function ReviewCard({ item, events, onApprove, onDiscard, onRetry }: Revi
               label="Price ($)"
               id={`price-${item.item_id}`}
               type="number"
-              min="0"
-              step="0.50"
+              min="0.01"
+              step="0.01"
               value={price}
-              onChange={e => setPrice(e.target.value)}
+              onChange={e => { setPrice(e.target.value); setPriceError(''); }}
               placeholder="12.00"
             />
+            {priceError && (
+              <p role="alert" style={{ margin: '4px 0 0', color: 'var(--color-accent-magenta)', fontSize: 'var(--text-body-sm)' }}>
+                {priceError}
+              </p>
+            )}
           </div>
           <div style={{ flex: 1, minWidth: 120 }}>
             <Input
