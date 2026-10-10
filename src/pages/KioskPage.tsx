@@ -1,5 +1,7 @@
 import React, { useState, useEffect } from 'react';
-import { collection, getDocs, doc, query, where, writeBatch } from 'firebase/firestore';
+import {
+  collection, getDocs, onSnapshot, query, where,
+} from 'firebase/firestore';
 import { db } from '../lib/firebase';
 import type { BazaarlyEvent, CartItem, InventoryItem } from '../lib/types';
 import { Button } from '../components/ui/Button';
@@ -24,7 +26,7 @@ export function KioskPage({ onExit }: KioskPageProps) {
   const [search, setSearch] = useState('');
   const [exitPassword, setExitPassword] = useState('');
   const [showExitPrompt, setShowExitPrompt] = useState(false);
-  const [checkingOut, setCheckingOut] = useState(false);
+  const [checkoutError, setCheckoutError] = useState('');
 
   useEffect(() => {
     async function loadEvents() {
@@ -33,13 +35,6 @@ export function KioskPage({ onExit }: KioskPageProps) {
     }
     loadEvents();
   }, []);
-
-  async function loadEventItems(eventId: string) {
-    const snap = await getDocs(
-      query(collection(db, 'inventory'), where('eventId', '==', eventId), where('status', '==', 'approved'))
-    );
-    setItems(snap.docs.map(d => ({ id: d.id, ...d.data() } as InventoryItem)));
-  }
 
   function handleSelectEvent(event: BazaarlyEvent) {
     setSelectedEvent(event);
@@ -53,9 +48,32 @@ export function KioskPage({ onExit }: KioskPageProps) {
       setPasswordError('Incorrect password');
       return;
     }
-    loadEventItems(selectedEvent!.id);
     setStep('active');
   }
+
+  useEffect(() => {
+    if (step !== 'active' || !selectedEvent) return;
+
+    const itemsQuery = query(
+      collection(db, 'inventory'),
+      where('eventId', '==', selectedEvent.id),
+      where('status', '==', 'approved')
+    );
+    return onSnapshot(itemsQuery, snapshot => {
+      const nextItems = snapshot.docs.map(d => ({ id: d.id, ...d.data() } as InventoryItem));
+      const itemsById = new Map(nextItems.map(item => [item.id, item]));
+      setItems(nextItems);
+      setCart(current => current.flatMap(cartItem => {
+        const currentItem = itemsById.get(cartItem.itemId);
+        return currentItem
+          ? [{ ...cartItem, price: currentItem.price, title: currentItem.title, imageUrl: currentItem.imageUrl }]
+          : [];
+      }));
+      setCheckoutError('');
+    }, error => {
+      setCheckoutError(`Could not refresh event inventory: ${error.message}`);
+    });
+  }, [selectedEvent, step]);
 
   function addToCart(item: InventoryItem) {
     if (cart.some(c => c.itemId === item.id)) return;
@@ -66,23 +84,32 @@ export function KioskPage({ onExit }: KioskPageProps) {
     setCart(prev => prev.filter(c => c.itemId !== itemId));
   }
 
-  async function handleCheckout() {
-    if (cart.length === 0) return;
-    setCheckingOut(true);
+  function handleCheckout() {
+    setCheckoutError('');
+    const checkoutUrl = import.meta.env.VITE_SOLANA_CHECKOUT_URL;
+    if (!checkoutUrl) {
+      setCheckoutError('Configure VITE_SOLANA_CHECKOUT_URL to enable Solana Pay checkout.');
+      return;
+    }
+    if (!selectedEvent || cart.length === 0) return;
+
     try {
-      const batch = writeBatch(db);
-      let totalRevenue = selectedEvent!.grossRevenue ?? 0;
-      for (const cartItem of cart) {
-        batch.update(doc(db, 'inventory', cartItem.itemId), { status: 'sold' });
-        totalRevenue += cartItem.price;
+      const url = new URL(checkoutUrl);
+      if (url.protocol !== 'http:' && url.protocol !== 'https:') {
+        throw new Error('The Solana checkout URL must use HTTP or HTTPS.');
       }
-      batch.update(doc(db, 'events', selectedEvent!.id), { grossRevenue: totalRevenue });
-      await batch.commit();
-      const soldIds = new Set(cart.map(c => c.itemId));
-      setItems(prev => prev.filter(item => !soldIds.has(item.id)));
-      setCart([]);
-    } finally {
-      setCheckingOut(false);
+      url.searchParams.set('eventId', selectedEvent.id);
+      url.searchParams.delete('itemId');
+      for (const item of cart) url.searchParams.append('itemId', item.itemId);
+
+      const checkoutWindow = window.open(url.toString(), '_blank');
+      if (!checkoutWindow) {
+        setCheckoutError('The browser blocked the checkout window. Allow pop-ups and try again.');
+        return;
+      }
+      checkoutWindow.opener = null;
+    } catch (error) {
+      setCheckoutError(error instanceof Error ? error.message : 'The Solana checkout URL is invalid.');
     }
   }
 
@@ -100,6 +127,7 @@ export function KioskPage({ onExit }: KioskPageProps) {
   }
 
   const cartTotal = cart.reduce((sum, item) => sum + item.price, 0);
+  const checkoutConfigured = Boolean(import.meta.env.VITE_SOLANA_CHECKOUT_URL);
   const cartItemIds = new Set(cart.map(c => c.itemId));
   const filteredItems = items.filter(item =>
     !cartItemIds.has(item.id) &&
@@ -291,13 +319,18 @@ export function KioskPage({ onExit }: KioskPageProps) {
               <Button
                 variant="primary"
                 onClick={handleCheckout}
-                disabled={checkingOut}
+                disabled={!checkoutConfigured}
                 style={{ width: '100%', justifyContent: 'center' }}
               >
-                {checkingOut ? 'Processing…' : `Checkout — $${cartTotal.toFixed(2)}`}
+                {checkoutConfigured ? `Pay with Solana — $${cartTotal.toFixed(2)}` : 'Configure Solana Pay checkout'}
               </Button>
+              {checkoutError && (
+                <p role="alert" style={{ margin: 'var(--space-sm) 0 0', color: 'var(--color-accent-magenta)', fontSize: 'var(--text-body-sm)' }}>
+                  {checkoutError}
+                </p>
+              )}
               <p style={{ margin: '6px 0 0', fontFamily: 'var(--font-mono)', fontSize: 10, textAlign: 'center', opacity: 0.35, textTransform: 'uppercase', letterSpacing: '0.5px' }}>
-                Solana Pay — coming soon
+                Items update after payment confirms on Solana Devnet.
               </p>
             </div>
           )}
