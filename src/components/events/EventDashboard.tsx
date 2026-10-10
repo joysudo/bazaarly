@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import type { CSSProperties, ReactNode } from 'react';
 import { collection, getDocs, query, where } from 'firebase/firestore';
 import { db } from '../../lib/firebase';
+import { Modal } from '../ui/Modal';
 import { Button } from '../ui/Button';
 import { Badge } from '../ui/Badge';
 import type { BazaarlyEvent, EventSale, InventoryItem } from '../../lib/types';
@@ -11,6 +12,7 @@ interface EventDashboardProps {
   onClose: () => void;
   onMarkComplete: () => Promise<void>;
   onReturnInventory?: () => Promise<void>;
+  onDeleteEvent: () => Promise<void>;
 }
 
 interface DashboardData {
@@ -20,8 +22,10 @@ interface DashboardData {
   error?: string;
 }
 
-export function EventDashboard({ event, onClose, onMarkComplete, onReturnInventory }: EventDashboardProps) {
+export function EventDashboard({ event, onClose, onMarkComplete, onReturnInventory, onDeleteEvent }: EventDashboardProps) {
   const [loadingAction, setLoadingAction] = useState<string | null>(null);
+  const [actionError, setActionError] = useState('');
+  const [confirmDelete, setConfirmDelete] = useState(false);
   const [dashboard, setDashboard] = useState<DashboardData | null>(null);
   const [reloadCount, setReloadCount] = useState(0);
   const date = new Date(event.date);
@@ -77,9 +81,12 @@ export function EventDashboard({ event, onClose, onMarkComplete, onReturnInvento
 
   async function handleAction(key: string, fn: () => Promise<void>) {
     setLoadingAction(key);
+    setActionError('');
     try {
       await fn();
       onClose();
+    } catch (error) {
+      setActionError(error instanceof Error ? error.message : 'The event action failed. Please try again.');
     } finally {
       setLoadingAction(null);
     }
@@ -199,6 +206,14 @@ export function EventDashboard({ event, onClose, onMarkComplete, onReturnInvento
             flexWrap: 'wrap',
           }}
         >
+          <Button
+            variant="magenta"
+            onClick={() => setConfirmDelete(true)}
+            disabled={loadingAction !== null}
+            style={{ marginRight: 'auto' }}
+          >
+            Delete event
+          </Button>
           {!isPast && onReturnInventory && (
             <Button
               variant="secondary"
@@ -220,6 +235,30 @@ export function EventDashboard({ event, onClose, onMarkComplete, onReturnInvento
           {isPast && <Button variant="secondary" onClick={onClose}>← All events</Button>}
         </footer>
       </div>
+      {actionError && (
+        <p role="alert" style={{ maxWidth: 1280, margin: '0 auto var(--space-lg)', padding: '0 var(--space-xxl)', color: 'var(--color-accent-magenta)', fontSize: 'var(--text-body-sm)' }}>
+          {actionError}
+        </p>
+      )}
+      <Modal open={confirmDelete} onClose={() => setConfirmDelete(false)} title="Delete this event?">
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-md)' }}>
+          <p style={{ margin: 0, fontSize: 'var(--text-body-sm)', lineHeight: 1.5 }}>
+            Delete <strong>{event.name}</strong>? Unsold inventory will be unassigned and kept. Sold inventory and sales records will remain, and sales history will not be deleted. This cannot be undone.
+          </p>
+          <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 'var(--space-sm)' }}>
+            <Button variant="secondary" onClick={() => setConfirmDelete(false)} disabled={loadingAction !== null}>
+              Cancel
+            </Button>
+            <Button
+              variant="magenta"
+              onClick={() => handleAction('delete', onDeleteEvent)}
+              disabled={loadingAction !== null}
+            >
+              {loadingAction === 'delete' ? 'Deleting…' : 'Delete event'}
+            </Button>
+          </div>
+        </div>
+      </Modal>
     </main>
   );
 }

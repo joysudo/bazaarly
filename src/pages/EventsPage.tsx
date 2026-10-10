@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import {
-  collection, addDoc, getDocs, doc, updateDoc, query, orderBy, writeBatch,
+  collection, addDoc, deleteDoc, getDocs, doc, updateDoc, query, where, orderBy, writeBatch,
 } from 'firebase/firestore';
 import { db } from '../lib/firebase';
 import type { BazaarlyEvent } from '../lib/types';
@@ -58,6 +58,26 @@ export function EventsPage({ selectedEvent, onSelectEvent, onCloseDashboard }: E
     await loadEvents();
   }
 
+  async function handleDeleteEvent(event: BazaarlyEvent) {
+    const inventorySnapshot = await getDocs(query(
+      collection(db, 'inventory'),
+      where('eventId', '==', event.id),
+    ));
+    const unsoldItems = inventorySnapshot.docs.filter(item => item.data().status !== 'sold');
+    const chunkSize = 450;
+
+    for (let start = 0; start < unsoldItems.length; start += chunkSize) {
+      const batch = writeBatch(db);
+      unsoldItems.slice(start, start + chunkSize).forEach(item => {
+        batch.update(item.ref, { eventId: null });
+      });
+      await batch.commit();
+    }
+
+    await deleteDoc(doc(db, 'events', event.id));
+    await loadEvents();
+  }
+
   const upcoming = events.filter(e => e.status === 'upcoming');
   const past = events.filter(e => e.status === 'past');
 
@@ -68,6 +88,7 @@ export function EventsPage({ selectedEvent, onSelectEvent, onCloseDashboard }: E
         onClose={onCloseDashboard}
         onMarkComplete={() => handleMarkComplete(selectedEvent)}
         onReturnInventory={selectedEvent.inventoryIds.length > 0 ? () => handleReturnInventory(selectedEvent) : undefined}
+        onDeleteEvent={() => handleDeleteEvent(selectedEvent)}
       />
     );
   }

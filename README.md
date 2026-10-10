@@ -13,6 +13,8 @@ Customer Display embeds the Solana checkout in a modal and passes the selected e
 
 The Events page shows event finances and sales counts directly on each event tile. Open a tile to navigate to a full-page event dashboard, including inventory photos and statuses, sell-through metrics, and confirmed sale records. Use the Events navigation tab or “All events” to return to the event list.
 
+Events can be deleted from their dashboard after confirmation. Deleting an event unassigns its unsold inventory and preserves sold inventory and sales history.
+
 See the Solana checkout repo's README for payment configuration and behavior.
 
 ## Build and lint
