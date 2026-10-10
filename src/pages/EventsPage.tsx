@@ -7,15 +7,20 @@ import type { BazaarlyEvent } from '../lib/types';
 import { Button } from '../components/ui/Button';
 import { EventCard } from '../components/events/EventCard';
 import { CreateEventModal } from '../components/events/CreateEventModal';
-import { EventDetailModal } from '../components/events/EventDetailModal';
+import { EventDashboard } from '../components/events/EventDashboard';
 
 type EventDraft = Omit<BazaarlyEvent, 'id' | 'createdAt' | 'inventoryIds' | 'grossRevenue' | 'status'>;
 
-export function EventsPage() {
+interface EventsPageProps {
+  selectedEvent: BazaarlyEvent | null;
+  onSelectEvent: (event: BazaarlyEvent) => void;
+  onCloseDashboard: () => void;
+}
+
+export function EventsPage({ selectedEvent, onSelectEvent, onCloseDashboard }: EventsPageProps) {
   const [events, setEvents] = useState<BazaarlyEvent[]>([]);
   const [loading, setLoading] = useState(true);
   const [showCreate, setShowCreate] = useState(false);
-  const [selectedEvent, setSelectedEvent] = useState<BazaarlyEvent | null>(null);
 
   const loadEvents = useCallback(async () => {
     const q = query(collection(db, 'events'), orderBy('date', 'desc'));
@@ -55,6 +60,17 @@ export function EventsPage() {
 
   const upcoming = events.filter(e => e.status === 'upcoming');
   const past = events.filter(e => e.status === 'past');
+
+  if (selectedEvent) {
+    return (
+      <EventDashboard
+        event={events.find(event => event.id === selectedEvent.id) ?? selectedEvent}
+        onClose={onCloseDashboard}
+        onMarkComplete={() => handleMarkComplete(selectedEvent)}
+        onReturnInventory={selectedEvent.inventoryIds.length > 0 ? () => handleReturnInventory(selectedEvent) : undefined}
+      />
+    );
+  }
 
   return (
     <main style={{ flex: 1 }}>
@@ -131,7 +147,7 @@ export function EventsPage() {
                   }}
                 >
                   {upcoming.map(event => (
-                    <EventCard key={event.id} event={event} onOpen={() => setSelectedEvent(event)} />
+                    <EventCard key={event.id} event={event} onOpen={() => onSelectEvent(event)} />
                   ))}
                 </div>
               )}
@@ -149,7 +165,7 @@ export function EventsPage() {
                   }}
                 >
                   {past.map(event => (
-                    <EventCard key={event.id} event={event} onOpen={() => setSelectedEvent(event)} />
+                    <EventCard key={event.id} event={event} onOpen={() => onSelectEvent(event)} />
                   ))}
                 </div>
               </section>
@@ -159,15 +175,6 @@ export function EventsPage() {
       </div>
 
       <CreateEventModal open={showCreate} onClose={() => setShowCreate(false)} onSubmit={handleCreate} />
-
-      {selectedEvent && (
-        <EventDetailModal
-          event={selectedEvent}
-          onClose={() => { setSelectedEvent(null); loadEvents(); }}
-          onMarkComplete={() => handleMarkComplete(selectedEvent)}
-          onReturnInventory={selectedEvent.inventoryIds.length > 0 ? () => handleReturnInventory(selectedEvent) : undefined}
-        />
-      )}
     </main>
   );
 }

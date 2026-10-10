@@ -2,12 +2,11 @@ import { useEffect, useState } from 'react';
 import type { CSSProperties, ReactNode } from 'react';
 import { collection, getDocs, query, where } from 'firebase/firestore';
 import { db } from '../../lib/firebase';
-import { Modal } from '../ui/Modal';
 import { Button } from '../ui/Button';
 import { Badge } from '../ui/Badge';
 import type { BazaarlyEvent, EventSale, InventoryItem } from '../../lib/types';
 
-interface EventDetailModalProps {
+interface EventDashboardProps {
   event: BazaarlyEvent;
   onClose: () => void;
   onMarkComplete: () => Promise<void>;
@@ -21,7 +20,7 @@ interface DashboardData {
   error?: string;
 }
 
-export function EventDetailModal({ event, onClose, onMarkComplete, onReturnInventory }: EventDetailModalProps) {
+export function EventDashboard({ event, onClose, onMarkComplete, onReturnInventory }: EventDashboardProps) {
   const [loadingAction, setLoadingAction] = useState<string | null>(null);
   const [dashboard, setDashboard] = useState<DashboardData | null>(null);
   const [reloadCount, setReloadCount] = useState(0);
@@ -87,8 +86,8 @@ export function EventDetailModal({ event, onClose, onMarkComplete, onReturnInven
   }
 
   return (
-    <Modal open onClose={onClose} title={event.name} fullscreen>
-      <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-lg)' }}>
+    <main style={{ flex: 1, background: 'var(--color-canvas)' }}>
+      <div style={{ maxWidth: 1280, margin: '0 auto', padding: 'var(--space-xl) var(--space-xxl) var(--space-xxl)', display: 'flex', flexDirection: 'column', gap: 'var(--space-lg)' }}>
         <header>
           <Button variant="tertiary" onClick={onClose} style={{ margin: '-8px 0 var(--space-sm)', paddingLeft: 0 }}>
             ← All events
@@ -102,6 +101,9 @@ export function EventDetailModal({ event, onClose, onMarkComplete, onReturnInven
               })}
             </span>
           </div>
+          <h1 style={{ margin: '0 0 var(--space-xs)', fontSize: 'clamp(32px, 4vw, 48px)', fontWeight: 540, lineHeight: 1.1, letterSpacing: '-0.7px' }}>
+            {event.name}
+          </h1>
           {event.description && (
             <p style={{ margin: 0, fontSize: 'var(--text-body-sm)', opacity: 0.65, lineHeight: 1.5 }}>
               {event.description}
@@ -215,10 +217,10 @@ export function EventDetailModal({ event, onClose, onMarkComplete, onReturnInven
               {loadingAction === 'complete' ? 'Marking…' : 'Mark Complete'}
             </Button>
           )}
-          {isPast && <Button variant="secondary" onClick={onClose}>Close dashboard</Button>}
+          {isPast && <Button variant="secondary" onClick={onClose}>← All events</Button>}
         </footer>
       </div>
-    </Modal>
+    </main>
   );
 }
 
