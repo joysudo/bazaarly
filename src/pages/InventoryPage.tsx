@@ -2,7 +2,8 @@ import React, { useState, useEffect, useCallback } from 'react';
 import {
   collection, addDoc, getDocs, doc, query, orderBy, writeBatch, arrayUnion, updateDoc,
 } from 'firebase/firestore';
-import { db } from '../lib/firebase';
+import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
+import { db, storage } from '../lib/firebase';
 import type { BazaarlyEvent, GarmentItem, InventoryItem, ApprovePayload } from '../lib/types';
 import { getItemImageUrl } from '../lib/garmentVision';
 import { Button } from '../components/ui/Button';
@@ -39,13 +40,28 @@ export function InventoryPage() {
 
   useEffect(() => { load(); }, [load]);
 
+  async function mirrorImage(serviceItemId: string): Promise<string> {
+    const sourceUrl = getItemImageUrl(serviceItemId);
+    try {
+      const res = await fetch(sourceUrl);
+      if (!res.ok) return sourceUrl;
+      const blob = await res.blob();
+      const storageRef = ref(storage, `inventory/${serviceItemId}/image.jpg`);
+      await uploadBytes(storageRef, blob, { contentType: blob.type || 'image/jpeg' });
+      return getDownloadURL(storageRef);
+    } catch {
+      return sourceUrl;
+    }
+  }
+
   async function handleItemApproved(garmentItem: GarmentItem, payload: ApprovePayload) {
+    const imageUrl = await mirrorImage(garmentItem.item_id);
     const docRef = await addDoc(collection(db, 'inventory'), {
       serviceItemId: garmentItem.item_id,
       price: payload.price,
       title: payload.title,
       status: 'approved',
-      imageUrl: getItemImageUrl(garmentItem.item_id),
+      imageUrl,
       overview: garmentItem.descriptions?.overview ?? '',
       garmentType: payload.garmentType,
       mainColors: payload.mainColors,
