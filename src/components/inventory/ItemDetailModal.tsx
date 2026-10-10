@@ -42,12 +42,18 @@ export function ItemDetailModal({ item, events, onClose, onSaved }: ItemDetailMo
   }
 
   async function handleSave() {
+    const parsedPrice = Number(price);
+    if (!price.trim() || !Number.isFinite(parsedPrice) || Math.round(parsedPrice * 100) <= 0) {
+      setError('Enter a price of at least $0.01 before saving this item.');
+      return;
+    }
+
     setSaving(true);
     setError('');
     try {
       const update: Partial<InventoryItem> = {
         title: title.trim() || 'Untitled',
-        price: parseFloat(price) || 0,
+        price: parsedPrice,
         garmentType: garmentType.trim(),
         mainColors: colors,
         searchText: keywords,
@@ -112,7 +118,7 @@ export function ItemDetailModal({ item, events, onClose, onSaved }: ItemDetailMo
           {/* Price · Type · Event */}
           <div style={{ display: 'flex', gap: 'var(--space-sm)', flexWrap: 'wrap' }}>
             <div style={{ flex: '0 0 100px' }}>
-              <Input label="Price ($)" id="detail-price" type="number" min="0" step="0.50" value={price} onChange={e => setPrice(e.target.value)} disabled={isSold} />
+              <Input label="Price ($)" id="detail-price" type="number" min="0.01" step="0.01" value={price} onChange={e => { setPrice(e.target.value); setError(''); }} disabled={isSold} />
             </div>
             <div style={{ flex: 1, minWidth: 120 }}>
               <Input label="Garment Type" id="detail-type" value={garmentType} onChange={e => setGarmentType(e.target.value)} placeholder="T-shirt, jacket…" disabled={isSold} />

@@ -68,7 +68,12 @@ export function KioskPage({ onExit }: KioskPageProps) {
       setCart(current => current.flatMap(cartItem => {
         const currentItem = itemsById.get(cartItem.itemId);
         return currentItem
-          ? [{ ...cartItem, price: currentItem.price, title: currentItem.title, imageUrl: currentItem.imageUrl }]
+          ? [{
+            ...cartItem,
+            price: hasValidSalePrice(currentItem.price) ? currentItem.price : 0,
+            title: currentItem.title,
+            imageUrl: currentItem.imageUrl,
+          }]
           : [];
       }));
       setCheckoutError('');
@@ -78,6 +83,7 @@ export function KioskPage({ onExit }: KioskPageProps) {
   }, [selectedEvent, step]);
 
   function addToCart(item: InventoryItem) {
+    if (!hasValidSalePrice(item.price)) return;
     if (cart.some(c => c.itemId === item.id)) return;
     setCart(prev => [...prev, { itemId: item.id, price: item.price, title: item.title, imageUrl: item.imageUrl }]);
   }
@@ -94,6 +100,10 @@ export function KioskPage({ onExit }: KioskPageProps) {
       return;
     }
     if (!selectedEvent || cart.length === 0) return;
+    if (cart.some(item => !hasValidSalePrice(item.price))) {
+      setCheckoutError('An item in the cart has no valid price. Exit kiosk mode and set its price in Inventory before checkout.');
+      return;
+    }
 
     try {
       const url = new URL(checkoutUrl);
@@ -123,7 +133,7 @@ export function KioskPage({ onExit }: KioskPageProps) {
     onExit();
   }
 
-  const cartTotal = cart.reduce((sum, item) => sum + item.price, 0);
+  const cartTotal = cart.reduce((sum, item) => sum + (hasValidSalePrice(item.price) ? item.price : 0), 0);
   const checkoutConfigured = Boolean(import.meta.env.VITE_SOLANA_CHECKOUT_URL);
   const cartItemIds = new Set(cart.map(c => c.itemId));
   const filteredItems = items.filter(item =>
@@ -366,14 +376,21 @@ export function KioskPage({ onExit }: KioskPageProps) {
                   <div
                     key={item.id}
                     onClick={() => addToCart(item)}
+                    aria-disabled={!hasValidSalePrice(item.price)}
                     style={{
-                      cursor: 'pointer',
+                      cursor: hasValidSalePrice(item.price) ? 'pointer' : 'not-allowed',
                       borderRadius: 'var(--radius-md)',
                       overflow: 'hidden',
                       background: 'var(--color-surface-soft)',
                       transition: 'box-shadow 0.15s, transform 0.1s',
+                      opacity: hasValidSalePrice(item.price) ? 1 : 0.65,
                     }}
-                    onMouseEnter={e => { e.currentTarget.style.boxShadow = '0 4px 16px rgba(0,0,0,0.1)'; e.currentTarget.style.transform = 'translateY(-2px)'; }}
+                    onMouseEnter={e => {
+                      if (hasValidSalePrice(item.price)) {
+                        e.currentTarget.style.boxShadow = '0 4px 16px rgba(0,0,0,0.1)';
+                        e.currentTarget.style.transform = 'translateY(-2px)';
+                      }
+                    }}
                     onMouseLeave={e => { e.currentTarget.style.boxShadow = 'none'; e.currentTarget.style.transform = 'none'; }}
                   >
                     <div style={{ aspectRatio: '1 / 1', overflow: 'hidden', background: 'var(--color-hairline-soft)' }}>
@@ -384,8 +401,15 @@ export function KioskPage({ onExit }: KioskPageProps) {
                       )}
                     </div>
                     <div style={{ padding: 'var(--space-sm)' }}>
-                      <div style={{ fontWeight: 700, fontSize: 'var(--text-body-sm)', marginBottom: 2 }}>${item.price.toFixed(2)}</div>
+                      <div style={{ fontWeight: 700, fontSize: 'var(--text-body-sm)', marginBottom: 2 }}>
+                        {hasValidSalePrice(item.price) ? `$${item.price.toFixed(2)}` : 'Price required'}
+                      </div>
                       <div style={{ fontSize: 13, opacity: 0.65, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{item.title}</div>
+                      {!hasValidSalePrice(item.price) && (
+                        <div style={{ marginTop: 4, fontSize: 11, color: 'var(--color-accent-magenta)' }}>
+                          Set a price in Inventory to sell
+                        </div>
+                      )}
                     </div>
                   </div>
                 ))}
@@ -522,4 +546,8 @@ function CenteredFrame({ children, bg, maxWidth = 480 }: { children: React.React
       </div>
     </div>
   );
+}
+
+function hasValidSalePrice(price: unknown): price is number {
+  return typeof price === 'number' && Number.isFinite(price) && Math.round(price * 100) > 0;
 }
