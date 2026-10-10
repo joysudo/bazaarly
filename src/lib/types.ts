@@ -22,6 +22,33 @@ export interface InventoryItem {
   createdAt: string;
 }
 
+export interface EventSaleItem {
+  inventoryItemId: string;
+  title: string;
+  price: number;
+}
+
+export interface EventSale {
+  id: string;
+  eventId: string;
+  items: EventSaleItem[];
+  itemCount: number;
+  grossRevenue: number;
+  createdAt: string;
+  payment: EventSalePayment;
+}
+
+export interface EventSalePayment {
+  method: 'solana_pay';
+  network: 'devnet';
+  status: 'confirmed';
+  amount_sol: number;
+  merchant_wallet: string;
+  reference: string;
+  signature: string;
+  confirmed_at: string;
+}
+
 export interface GarmentView {
   view_id: string;
   path: string;
