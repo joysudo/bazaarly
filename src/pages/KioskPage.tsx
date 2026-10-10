@@ -6,6 +6,7 @@ import { db } from '../lib/firebase';
 import type { BazaarlyEvent, CartItem, InventoryItem } from '../lib/types';
 import { Button } from '../components/ui/Button';
 import { Input } from '../components/ui/Input';
+import { Modal } from '../components/ui/Modal';
 
 const KIOSK_PASSWORD = 'bazaarly';
 
@@ -27,6 +28,7 @@ export function KioskPage({ onExit }: KioskPageProps) {
   const [exitPassword, setExitPassword] = useState('');
   const [showExitPrompt, setShowExitPrompt] = useState(false);
   const [checkoutError, setCheckoutError] = useState('');
+  const [checkoutUrl, setCheckoutUrl] = useState<string | null>(null);
 
   useEffect(() => {
     async function loadEvents() {
@@ -102,12 +104,7 @@ export function KioskPage({ onExit }: KioskPageProps) {
       url.searchParams.delete('itemId');
       for (const item of cart) url.searchParams.append('itemId', item.itemId);
 
-      const checkoutWindow = window.open(url.toString(), '_blank');
-      if (!checkoutWindow) {
-        setCheckoutError('The browser blocked the checkout window. Allow pop-ups and try again.');
-        return;
-      }
-      checkoutWindow.opener = null;
+      setCheckoutUrl(url.toString());
     } catch (error) {
       setCheckoutError(error instanceof Error ? error.message : 'The Solana checkout URL is invalid.');
     }
@@ -455,6 +452,47 @@ export function KioskPage({ onExit }: KioskPageProps) {
           </div>
         </div>
       )}
+
+      <Modal
+        open={checkoutUrl !== null}
+        onClose={() => setCheckoutUrl(null)}
+        title="Solana checkout"
+        maxWidth={900}
+      >
+        {checkoutUrl && (
+          <>
+            <p style={{ margin: '0 0 var(--space-md)', opacity: 0.65, fontSize: 'var(--text-body-sm)', lineHeight: 1.5 }}>
+              Keep checkout open until the receipt appears. To scan the Solana Pay QR code, use a wallet on another device.
+            </p>
+            <iframe
+              src={checkoutUrl}
+              title="Bazaarly Solana checkout"
+              style={{
+                display: 'block',
+                width: '100%',
+                height: 'min(68vh, 680px)',
+                minHeight: 360,
+                border: '1px solid var(--color-hairline)',
+                borderRadius: 'var(--radius-md)',
+                background: 'var(--color-canvas)',
+              }}
+            />
+            <a
+              href={checkoutUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              style={{
+                display: 'inline-block',
+                marginTop: 'var(--space-md)',
+                color: 'var(--color-ink)',
+                fontSize: 'var(--text-body-sm)',
+              }}
+            >
+              Having trouble? Open checkout in a new tab
+            </a>
+          </>
+        )}
+      </Modal>
     </div>
   );
 }
