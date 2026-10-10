@@ -1,0 +1,149 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:ital,opsz,wght@0,14..32,100..900;1,14..32,100..900&family=JetBrains+Mono:wght@400;500&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Averia+Serif+Libre:ital,wght@0,300;0,400;0,700;1,300;1,400;1,700&display=swap');
+
+.averia-serif-libre-light {
+  font-family: "Averia Serif Libre", serif;
+  font-weight: 300;
+  font-style: normal;
+}
+
+/* ── Design Tokens ─────────────────────────────────────────────────────────── */
+:root {
+  /* Colors */
+  --color-primary:        #000000;
+  --color-on-primary:     #ffffff;
+  --color-ink:            #000000;
+  --color-canvas:         #ffffff;
+  --color-inverse-canvas: #000000;
+  --color-inverse-ink:    #ffffff;
+  --color-hairline:       #e6e6e6;
+  --color-hairline-soft:  #f1f1f1;
+  --color-surface-soft:   #f7f7f5;
+
+  /* Color blocks */
+  --color-block-lime:   #dceeb1;
+  --color-block-lilac:  #c5b0f4;
+  --color-block-cream:  #f4ecd6;
+  --color-block-pink:   #efd4d4;
+  --color-block-mint:   #c8e6cd;
+  --color-block-coral:  #f3c9b6;
+  --color-block-navy:   #1f1d3d;
+
+  /* Accent & Semantic */
+  --color-accent-magenta:    #ff3d8b;
+  --color-semantic-success:  #1ea64a;
+
+  /* Typography */
+  --font-sans: 'Averia Serif Libre', 'Inter', system-ui, -apple-system, sans-serif;
+  --font-mono: 'JetBrains Mono', ui-monospace, 'SF Mono', monospace;
+
+  /* Font sizes */
+  --text-display-xl: 86px;
+  --text-display-lg: 64px;
+  --text-headline:   26px;
+  --text-subhead:    26px;
+  --text-card-title: 24px;
+  --text-body-lg:    20px;
+  --text-body:       18px;
+  --text-body-sm:    16px;
+  --text-link:       20px;
+  --text-eyebrow:    18px;
+  --text-caption:    12px;
+
+  /* Spacing (8px base unit) */
+  --space-hair:    1px;
+  --space-xxs:     4px;
+  --space-xs:      8px;
+  --space-sm:      12px;
+  --space-md:      16px;
+  --space-lg:      24px;
+  --space-xl:      32px;
+  --space-xxl:     48px;
+  --space-section: 96px;
+
+  /* Border radius */
+  --radius-xs:   2px;
+  --radius-sm:   6px;
+  --radius-md:   8px;
+  --radius-lg:   24px;
+  --radius-xl:   32px;
+  --radius-pill: 50px;
+  --radius-full: 9999px;
+}
+
+/* ── Reset ──────────────────────────────────────────────────────────────────── */
+*, *::before, *::after {
+  box-sizing: border-box;
+}
+
+html, body {
+  margin: 0;
+  padding: 0;
+}
+
+body {
+  font-family: var(--font-sans);
+  font-size: var(--text-body);
+  font-weight: 320;
+  line-height: 1.45;
+  letter-spacing: -0.26px;
+  color: var(--color-ink);
+  background: var(--color-canvas);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+#root {
+  display: flex;
+  flex-direction: column;
+  min-height: 100svh;
+}
+
+h1, h2, h3, h4 {
+  margin: 0;
+  font-family: var(--font-sans);
+}
+
+p { margin: 0; }
+
+/* ── Scrollbar ───────────────────────────────────────────────────────────────── */
+::-webkit-scrollbar         { width: 6px; height: 6px; }
+::-webkit-scrollbar-track   { background: transparent; }
+::-webkit-scrollbar-thumb   { background: var(--color-hairline); border-radius: var(--radius-full); }
+
+/* ── Typography utilities ─────────────────────────────────────────────────────── */
+.eyebrow {
+  font-family: var(--font-mono);
+  font-size: var(--text-eyebrow);
+  font-weight: 400;
+  line-height: 1.30;
+  letter-spacing: 0.54px;
+  text-transform: uppercase;
+}
+
+.caption {
+  font-family: var(--font-mono);
+  font-size: var(--text-caption);
+  font-weight: 400;
+  line-height: 1.00;
+  letter-spacing: 0.60px;
+  text-transform: uppercase;
+}
+
+/* ── Responsive ──────────────────────────────────────────────────────────────── */
+@media (max-width: 768px) {
+  :root {
+    --text-display-xl: 48px;
+    --text-display-lg: 40px;
+    --space-section: 64px;
+    --space-xxl: 32px;
+  }
+}
+
+@media (max-width: 560px) {
+  :root {
+    --text-display-xl: 40px;
+    --text-display-lg: 32px;
+    --space-section: 48px;
+  }
+}
