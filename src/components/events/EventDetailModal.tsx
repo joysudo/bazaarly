@@ -87,9 +87,12 @@ export function EventDetailModal({ event, onClose, onMarkComplete, onReturnInven
   }
 
   return (
-    <Modal open onClose={onClose} title={event.name} maxWidth={1000}>
+    <Modal open onClose={onClose} title={event.name} fullscreen>
       <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-lg)' }}>
         <header>
+          <Button variant="tertiary" onClick={onClose} style={{ margin: '-8px 0 var(--space-sm)', paddingLeft: 0 }}>
+            ← All events
+          </Button>
           <div style={{ display: 'flex', gap: 'var(--space-sm)', alignItems: 'center', marginBottom: 'var(--space-sm)' }}>
             <Badge variant={isPast ? 'past' : 'upcoming'} />
             <span style={{ fontSize: 'var(--text-body-sm)', opacity: 0.55 }}>
