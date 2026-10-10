@@ -20,6 +20,20 @@ export interface InventoryItem {
   overview: string;
   title: string;
   createdAt: string;
+  garmentType?: string;
+  mainColors?: string[];
+  searchText?: string[];
+  artwork?: string;
+}
+
+export interface ApprovePayload {
+  price: number;
+  title: string;
+  garmentType: string;
+  mainColors: string[];
+  searchText: string[];
+  artwork: string;
+  eventId: string | null;
 }
 
 export interface GarmentView {
@@ -33,6 +47,12 @@ export interface GarmentDescriptions {
   sections: Record<string, string>;
   full_description: string;
   not_visible: string[];
+  // Enriched metadata — nested inside descriptions, not top-level
+  short_title?: string;
+  price?: string | null;     // "$15.00" string format
+  garment_type?: string;
+  main_colors?: string[];
+  search_text?: string[];
 }
 
 export interface GarmentItem {
@@ -41,28 +61,19 @@ export interface GarmentItem {
   session_id: string;
   scanned_at: string;
   status: 'processing' | 'ready' | 'approved' | 'discarded' | 'error';
-  descriptions: GarmentDescriptions | null;            // null until the description is ready
+  descriptions: GarmentDescriptions | null;
   descriptions_original?: GarmentDescriptions | null;
-  model_info?: {                                        // only exists after a successful description
+  model_info?: {
     vlm: string;
     prompt_version: string;
     latency_s: number;
     input_tokens: number | null;
     output_tokens: number | null;
   };
-  error?: string;                                       // set when status === 'error'
+  error?: string;
   views: GarmentView[];
-  // descriptions: GarmentDescriptions;
-  // descriptions_original?: GarmentDescriptions;
   edited: boolean;
   possible_duplicate_of: string | null;
-  // model_info: {
-  //   vlm: string;
-  //   prompt_version: string;
-  //   latency_s: number;
-  //   input_tokens: number;
-  //   output_tokens: number;
-  // };
   approved_at?: string;
   pending_id?: string;
 }

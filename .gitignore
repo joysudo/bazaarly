@@ -15,6 +15,7 @@ dist-ssr
 .env
 AGENT.md
 DESIGN.md
+scannerReference.md
 
 # Editor directories and files
 .vscode/*
