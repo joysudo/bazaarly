@@ -11,6 +11,8 @@ Bazaarly is a React + TypeScript dashboard for pop-up events, garment inventory,
 
 Customer Display embeds the Solana checkout in a modal and passes the selected event and inventory document IDs. Keep the modal open until the receipt appears so the checkout can confirm payment and record the sale. The checkout reads current item prices from Firestore and records a sale only after a Solana Devnet payment is confirmed. The demo requests a fixed `0.01 SOL`; event revenue is recorded in USD from the inventory prices. The modal also offers a separate-tab fallback; the payment QR is intended to be scanned by a wallet on another device.
 
+The Events page shows event finances and sales counts directly on each event tile. Open a tile for the event dashboard, including inventory photos and statuses, sell-through metrics, and confirmed sale records.
+
 See the Solana checkout repo's README for payment configuration and behavior.
 
 ## Build and lint

@@ -1,10 +1,11 @@
 import { useEffect, useState } from 'react';
+import type { CSSProperties, ReactNode } from 'react';
 import { collection, getDocs, query, where } from 'firebase/firestore';
 import { db } from '../../lib/firebase';
 import { Modal } from '../ui/Modal';
 import { Button } from '../ui/Button';
 import { Badge } from '../ui/Badge';
-import type { BazaarlyEvent } from '../../lib/types';
+import type { BazaarlyEvent, EventSale, InventoryItem } from '../../lib/types';
 
 interface EventDetailModalProps {
   event: BazaarlyEvent;
@@ -13,130 +14,177 @@ interface EventDetailModalProps {
   onReturnInventory?: () => Promise<void>;
 }
 
+interface DashboardData {
+  eventId: string;
+  inventory: InventoryItem[];
+  sales: EventSale[];
+  error?: string;
+}
+
 export function EventDetailModal({ event, onClose, onMarkComplete, onReturnInventory }: EventDetailModalProps) {
-  const [loading, setLoading] = useState<string | null>(null);
+  const [loadingAction, setLoadingAction] = useState<string | null>(null);
+  const [dashboard, setDashboard] = useState<DashboardData | null>(null);
+  const [reloadCount, setReloadCount] = useState(0);
   const date = new Date(event.date);
   const isPast = event.status === 'past';
-  const net = event.grossRevenue - event.vendorFee;
-  const [salesState, setSalesState] = useState<{
-    eventId: string;
-    sales: number;
-    items: number;
-    error?: string;
-  } | null>(null);
-  const currentSalesState = salesState?.eventId === event.id ? salesState : null;
-  const salesLoading = isPast && currentSalesState === null;
+  const currentDashboard = dashboard?.eventId === event.id ? dashboard : null;
+  const dataLoading = currentDashboard === null;
 
   useEffect(() => {
-    if (!isPast) return;
-
     let active = true;
 
-    getDocs(query(collection(db, 'sales'), where('eventId', '==', event.id)))
-      .then(snapshot => {
+    Promise.all([
+      getDocs(query(collection(db, 'inventory'), where('eventId', '==', event.id))),
+      getDocs(query(collection(db, 'sales'), where('eventId', '==', event.id))),
+    ])
+      .then(([inventorySnapshot, salesSnapshot]) => {
         if (!active) return;
-        const items = snapshot.docs.reduce((total, sale) => {
-          const itemCount = sale.data().itemCount;
-          return total + (typeof itemCount === 'number' ? itemCount : 0);
-        }, 0);
-        setSalesState({ eventId: event.id, sales: snapshot.size, items });
+        const inventory = inventorySnapshot.docs.map(snapshot => ({
+          id: snapshot.id,
+          ...snapshot.data(),
+        } as InventoryItem));
+        const sales = salesSnapshot.docs.map(snapshot => ({
+          id: snapshot.id,
+          ...snapshot.data(),
+        } as EventSale));
+        sales.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+        setDashboard({ eventId: event.id, inventory, sales });
       })
       .catch(error => {
         if (active) {
-          setSalesState({
+          setDashboard({
             eventId: event.id,
-            sales: 0,
-            items: 0,
-            error: error instanceof Error ? error.message : 'Could not load sales summary.',
+            inventory: [],
+            sales: [],
+            error: error instanceof Error ? error.message : 'Could not load the event dashboard.',
           });
         }
       });
 
     return () => { active = false; };
-  }, [event.id, isPast]);
+  }, [event.id, reloadCount]);
+
+  const inventory = currentDashboard?.inventory ?? [];
+  const sales = currentDashboard?.sales ?? [];
+  const soldInventoryCount = inventory.filter(item => item.status === 'sold').length;
+  const itemsSoldFromSales = sales.reduce((total, sale) => (
+    total + (typeof sale.itemCount === 'number' ? sale.itemCount : Array.isArray(sale.items) ? sale.items.length : 0)
+  ), 0);
+  const itemsSold = Math.max(soldInventoryCount, itemsSoldFromSales);
+  const availableInventoryCount = inventory.filter(item => item.status === 'approved').length;
+  const sellThrough = inventory.length > 0 ? Math.min(100, Math.round((itemsSold / inventory.length) * 100)) : 0;
+  const net = event.grossRevenue - event.vendorFee;
+  const averageSale = sales.length > 0 ? event.grossRevenue / sales.length : 0;
 
   async function handleAction(key: string, fn: () => Promise<void>) {
-    setLoading(key);
-    try { await fn(); onClose(); }
-    finally { setLoading(null); }
+    setLoadingAction(key);
+    try {
+      await fn();
+      onClose();
+    } finally {
+      setLoadingAction(null);
+    }
   }
 
   return (
-    <Modal open onClose={onClose} title={event.name}>
+    <Modal open onClose={onClose} title={event.name} maxWidth={1000}>
       <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-lg)' }}>
-        <div style={{ display: 'flex', gap: 'var(--space-sm)', alignItems: 'center' }}>
-          <Badge variant={isPast ? 'past' : 'upcoming'} />
-          <span style={{ fontSize: 'var(--text-body-sm)', opacity: 0.55 }}>
-            {date.toLocaleDateString('en-US', {
-              weekday: 'long', month: 'long', day: 'numeric',
-              year: 'numeric', hour: '2-digit', minute: '2-digit',
-            })}
-          </span>
-        </div>
+        <header>
+          <div style={{ display: 'flex', gap: 'var(--space-sm)', alignItems: 'center', marginBottom: 'var(--space-sm)' }}>
+            <Badge variant={isPast ? 'past' : 'upcoming'} />
+            <span style={{ fontSize: 'var(--text-body-sm)', opacity: 0.55 }}>
+              {date.toLocaleString('en-US', {
+                weekday: 'long', month: 'long', day: 'numeric',
+                year: 'numeric', hour: '2-digit', minute: '2-digit',
+              })}
+            </span>
+          </div>
+          {event.description && (
+            <p style={{ margin: 0, fontSize: 'var(--text-body-sm)', opacity: 0.65, lineHeight: 1.5 }}>
+              {event.description}
+            </p>
+          )}
+        </header>
 
-        {event.description && (
-          <p style={{ margin: 0, fontSize: 'var(--text-body-sm)', opacity: 0.7, lineHeight: 1.5 }}>
-            {event.description}
+        <section aria-label="Event finances">
+          <SectionHeading>Finances · USD</SectionHeading>
+          <div style={{ ...statPanelStyle, background: 'var(--color-block-lime)' }}>
+            <Stat label="Gross revenue" value={money(event.grossRevenue)} />
+            <Stat label="Vendor fee" value={money(event.vendorFee)} />
+            <Stat label="Net" value={money(net)} color={net >= 0 ? 'var(--color-semantic-success)' : 'var(--color-accent-magenta)'} />
+            <Stat label="Average sale" value={sales.length > 0 ? money(averageSale) : '—'} />
+          </div>
+          <p style={{ margin: 'var(--space-sm) 0 0', fontSize: 11, opacity: 0.5 }}>
+            Net is gross revenue minus the vendor fee. Devnet test SOL is not converted to USD.
           </p>
-        )}
+        </section>
 
-        <div
-          style={{
-            display: 'grid',
-            gridTemplateColumns: 'repeat(3, 1fr)',
-            gap: 'var(--space-md)',
-            background: 'var(--color-surface-soft)',
-            borderRadius: 'var(--radius-md)',
-            padding: 'var(--space-md)',
-          }}
-        >
-          <Stat label="Vendor Fee" value={`$${event.vendorFee.toFixed(2)}`} />
-          <Stat label="Gross" value={`$${event.grossRevenue.toFixed(2)}`} />
-          <Stat
-            label="Net"
-            value={`$${net.toFixed(2)}`}
-            color={net >= 0 ? 'var(--color-semantic-success)' : 'var(--color-accent-magenta)'}
-          />
-        </div>
+        <section aria-label="Event performance">
+          <SectionHeading>Performance</SectionHeading>
+          <div style={{ ...statPanelStyle, background: 'var(--color-block-cream)' }}>
+            <Stat label="Sales" value={dataLoading ? '…' : String(sales.length)} />
+            <Stat label="Items sold" value={dataLoading ? '…' : String(itemsSold)} />
+            <Stat label="Available" value={dataLoading ? '…' : String(availableInventoryCount)} />
+            <Stat label="Sell-through" value={dataLoading ? '…' : `${sellThrough}%`} />
+          </div>
+        </section>
 
-        {isPast && (
-          <div
-            style={{
-              display: 'grid',
-              gridTemplateColumns: 'repeat(2, 1fr)',
-              gap: 'var(--space-md)',
-              background: 'var(--color-surface-soft)',
-              borderRadius: 'var(--radius-md)',
-              padding: 'var(--space-md)',
-            }}
-          >
-            {salesLoading ? (
-              <p role="status" style={{ gridColumn: '1 / -1', margin: 0, fontSize: 'var(--text-body-sm)', opacity: 0.65 }}>
-                Loading sales summary…
-              </p>
-            ) : currentSalesState?.error ? (
-              <p role="alert" style={{ gridColumn: '1 / -1', margin: 0, color: 'var(--color-accent-magenta)', fontSize: 'var(--text-body-sm)' }}>
-                {currentSalesState.error}
-              </p>
-            ) : (
-              <>
-                <Stat label="Sales" value={String(currentSalesState?.sales ?? 0)} />
-                <Stat label="Items Sold" value={String(currentSalesState?.items ?? 0)} />
-              </>
-            )}
+        {currentDashboard?.error && (
+          <div role="alert" style={{ color: 'var(--color-accent-magenta)', fontSize: 'var(--text-body-sm)' }}>
+            Could not load dashboard details: {currentDashboard.error}
+            <Button variant="tertiary" onClick={() => setReloadCount(value => value + 1)} style={{ marginLeft: 8 }}>
+              Try again
+            </Button>
           </div>
         )}
 
-        <div>
-          <div style={{ fontFamily: 'var(--font-mono)', fontSize: 11, textTransform: 'uppercase', letterSpacing: '0.4px', opacity: 0.45, marginBottom: 6 }}>
-            Inventory
+        <section aria-label="Event inventory">
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', gap: 'var(--space-sm)', marginBottom: 'var(--space-sm)' }}>
+            <SectionHeading>Inventory</SectionHeading>
+            <span style={{ fontSize: 'var(--text-body-sm)', opacity: 0.5 }}>
+              {dataLoading ? 'Loading…' : `${inventory.length} assigned`}
+            </span>
           </div>
-          <p style={{ margin: 0, fontSize: 'var(--text-body-sm)', opacity: 0.65 }}>
-            {event.inventoryIds.length} item{event.inventoryIds.length !== 1 ? 's' : ''} assigned
-          </p>
-        </div>
+          {dataLoading ? (
+            <p role="status" style={{ margin: 0, padding: 'var(--space-lg)', textAlign: 'center', opacity: 0.55, background: 'var(--color-surface-soft)', borderRadius: 'var(--radius-md)' }}>
+              Loading event inventory…
+            </p>
+          ) : inventory.length === 0 ? (
+            <p style={{ margin: 0, padding: 'var(--space-lg)', textAlign: 'center', opacity: 0.55, background: 'var(--color-surface-soft)', borderRadius: 'var(--radius-md)' }}>
+              No inventory is assigned to this event.
+            </p>
+          ) : (
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(160px, 1fr))', gap: 'var(--space-md)' }}>
+              {inventory.map(item => (
+                <InventoryTile key={item.id} item={item} />
+              ))}
+            </div>
+          )}
+        </section>
 
-        <div
+        <section aria-label="Recent sales">
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', gap: 'var(--space-sm)', marginBottom: 'var(--space-sm)' }}>
+            <SectionHeading>Sales</SectionHeading>
+            <span style={{ fontSize: 'var(--text-body-sm)', opacity: 0.5 }}>
+              {dataLoading ? 'Loading…' : `${sales.length} transaction${sales.length === 1 ? '' : 's'}`}
+            </span>
+          </div>
+          {dataLoading ? (
+            <p role="status" style={{ margin: 0, padding: 'var(--space-lg)', textAlign: 'center', opacity: 0.55, background: 'var(--color-surface-soft)', borderRadius: 'var(--radius-md)' }}>
+              Loading sales…
+            </p>
+          ) : sales.length === 0 ? (
+            <p style={{ margin: 0, padding: 'var(--space-lg)', textAlign: 'center', opacity: 0.55, background: 'var(--color-surface-soft)', borderRadius: 'var(--radius-md)' }}>
+              No confirmed sales recorded yet.
+            </p>
+          ) : (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-sm)' }}>
+              {sales.map(sale => <SaleRow key={sale.id} sale={sale} />)}
+            </div>
+          )}
+        </section>
+
+        <footer
           style={{
             display: 'flex',
             gap: 'var(--space-sm)',
@@ -150,36 +198,115 @@ export function EventDetailModal({ event, onClose, onMarkComplete, onReturnInven
             <Button
               variant="secondary"
               onClick={() => handleAction('return', onReturnInventory)}
-              disabled={loading !== null}
+              disabled={loadingAction !== null}
             >
-              {loading === 'return' ? 'Moving…' : 'Return All Inventory'}
+              {loadingAction === 'return' ? 'Moving…' : 'Return All Inventory'}
             </Button>
           )}
           {!isPast && (
             <Button
               variant="primary"
               onClick={() => handleAction('complete', onMarkComplete)}
-              disabled={loading !== null}
+              disabled={loadingAction !== null}
             >
-              {loading === 'complete' ? 'Marking…' : 'Mark Complete'}
+              {loadingAction === 'complete' ? 'Marking…' : 'Mark Complete'}
             </Button>
           )}
-          {isPast && (
-            <Button variant="secondary" onClick={onClose}>Close</Button>
-          )}
-        </div>
+          {isPast && <Button variant="secondary" onClick={onClose}>Close dashboard</Button>}
+        </footer>
       </div>
     </Modal>
+  );
+}
+
+const statPanelStyle: CSSProperties = {
+  display: 'grid',
+  gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))',
+  gap: 'var(--space-md)',
+  padding: 'var(--space-lg)',
+  borderRadius: 'var(--radius-lg)',
+};
+
+function InventoryTile({ item }: { item: InventoryItem }) {
+  return (
+    <article style={{ overflow: 'hidden', border: '1px solid var(--color-hairline-soft)', borderRadius: 'var(--radius-md)', background: 'var(--color-canvas)' }}>
+      <div style={{ aspectRatio: '4 / 3', background: 'var(--color-surface-soft)' }}>
+        {item.imageUrl ? (
+          <img src={item.imageUrl} alt={item.title || 'Event inventory item'} loading="lazy" style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }} />
+        ) : (
+          <div style={{ width: '100%', height: '100%', display: 'grid', placeItems: 'center', opacity: 0.35, fontSize: 12 }}>
+            No image
+          </div>
+        )}
+      </div>
+      <div style={{ padding: 'var(--space-sm)' }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', gap: 8, alignItems: 'baseline' }}>
+          <strong style={{ minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', fontSize: 'var(--text-body-sm)' }}>
+            {item.title || 'Untitled item'}
+          </strong>
+          <span style={{ flexShrink: 0, fontWeight: 700, fontSize: 'var(--text-body-sm)' }}>{money(item.price)}</span>
+        </div>
+        <div style={{ marginTop: 5, fontFamily: 'var(--font-mono)', fontSize: 10, textTransform: 'uppercase', letterSpacing: '0.4px', opacity: 0.55 }}>
+          {item.status}
+        </div>
+      </div>
+    </article>
+  );
+}
+
+function SaleRow({ sale }: { sale: EventSale }) {
+  const itemTitles = Array.isArray(sale.items) ? sale.items.map(item => item.title).filter(Boolean) : [];
+  const saleDate = sale.createdAt ? new Date(sale.createdAt) : null;
+  const signature = sale.payment?.signature || sale.id;
+
+  return (
+    <article style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 'var(--space-md)', flexWrap: 'wrap', padding: 'var(--space-md)', background: 'var(--color-surface-soft)', borderRadius: 'var(--radius-md)' }}>
+      <div style={{ minWidth: 0 }}>
+        <strong style={{ fontSize: 'var(--text-body-sm)' }}>
+          {typeof sale.itemCount === 'number' ? sale.itemCount : itemTitles.length} item
+          {(typeof sale.itemCount === 'number' ? sale.itemCount : itemTitles.length) === 1 ? '' : 's'}
+          {' · '}{money(sale.grossRevenue)}
+        </strong>
+        <div style={{ marginTop: 3, fontSize: 12, opacity: 0.6 }}>
+          {saleDate && !Number.isNaN(saleDate.getTime()) ? saleDate.toLocaleString() : 'Date unavailable'}
+          {itemTitles.length > 0 && ` · ${itemTitles.join(', ')}`}
+        </div>
+      </div>
+      {signature && (
+        <a
+          href={`https://explorer.solana.com/tx/${encodeURIComponent(signature)}?cluster=devnet`}
+          target="_blank"
+          rel="noopener noreferrer"
+          style={{ fontFamily: 'var(--font-mono)', fontSize: 10, color: 'var(--color-ink)', overflowWrap: 'anywhere' }}
+        >
+          {signature.slice(0, 8)}…{signature.slice(-6)} ↗
+        </a>
+      )}
+    </article>
+  );
+}
+
+function SectionHeading({ children }: { children: ReactNode }) {
+  return (
+    <h3 style={{ margin: '0 0 var(--space-sm)', fontFamily: 'var(--font-mono)', fontSize: 11, fontWeight: 500, textTransform: 'uppercase', letterSpacing: '0.5px', opacity: 0.55 }}>
+      {children}
+    </h3>
   );
 }
 
 function Stat({ label, value, color }: { label: string; value: string; color?: string }) {
   return (
     <div>
-      <div style={{ fontFamily: 'var(--font-mono)', fontSize: 11, textTransform: 'uppercase', letterSpacing: '0.4px', opacity: 0.45, marginBottom: 4 }}>
+      <div style={{ fontFamily: 'var(--font-mono)', fontSize: 10, textTransform: 'uppercase', letterSpacing: '0.4px', opacity: 0.5, marginBottom: 4 }}>
         {label}
       </div>
-      <div style={{ fontWeight: 700, fontSize: 'var(--text-body)', color }}>{value}</div>
+      <div style={{ fontWeight: 700, fontSize: 'var(--text-body-lg)', color }}>
+        {value}
+      </div>
     </div>
   );
+}
+
+function money(value: number): string {
+  return new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(value);
 }

@@ -41,6 +41,7 @@ export function Modal({ open, onClose, title, children, maxWidth = 560 }: ModalP
           padding: 'var(--space-xl)',
           maxWidth,
           width: '100%',
+          boxSizing: 'border-box',
           maxHeight: '90vh',
           overflowY: 'auto',
         }}
