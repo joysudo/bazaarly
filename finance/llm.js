@@ -37,17 +37,20 @@ async function post(url, headers, body) {
 // Auth: a programmatic access token (PAT) is the quickest for a hackathon.
 //   Snowsight > your user > Settings > Authentication > Programmatic access tokens.
 async function snowflake({ system, messages }) {
-  const account = process.env.SNOWFLAKE_ACCOUNT;      // e.g. myorg-myaccount (the one you use for Snowsight)
-  const token = process.env.SNOWFLAKE_TOKEN;
-  if (!account || !token) throw new Error('Set SNOWFLAKE_ACCOUNT and SNOWFLAKE_TOKEN in finance/.env');
+  // Accepts either naming: SNOWFLAKE_ACCOUNT_URL / SNOWFLAKE_PAT / SNOWFLAKE_MODEL, or SNOWFLAKE_ACCOUNT / SNOWFLAKE_TOKEN / CORTEX_MODEL.
+  const account = process.env.SNOWFLAKE_ACCOUNT_URL || process.env.SNOWFLAKE_ACCOUNT;
+  const token = process.env.SNOWFLAKE_PAT || process.env.SNOWFLAKE_TOKEN;
+  if (!account || !token) throw new Error('Set SNOWFLAKE_ACCOUNT_URL and SNOWFLAKE_PAT in finance/.env');
 
-  const host = account.includes('.snowflakecomputing.com') ? account : `${account}.snowflakecomputing.com`;
+  // The account can be a full URL (https://org-acct.snowflakecomputing.com), a host, or just org-acct.
+  const host = account.trim().replace(/^https?:\/\//, '').replace(/\/+$/, '');
+  const fullHost = host.includes('.snowflakecomputing.com') ? host : `${host}.snowflakecomputing.com`;
   const tokenType = process.env.SNOWFLAKE_TOKEN_TYPE || 'PROGRAMMATIC_ACCESS_TOKEN'; // or KEYPAIR_JWT / OAUTH
   const text = await post(
-    `https://${host}/api/v2/cortex/inference:complete`,
+    `https://${fullHost}/api/v2/cortex/inference:complete`,
     { Authorization: `Bearer ${token}`, 'X-Snowflake-Authorization-Token-Type': tokenType },
     {
-      model: process.env.CORTEX_MODEL || 'llama3.3-70b',
+      model: process.env.SNOWFLAKE_MODEL || process.env.CORTEX_MODEL || 'llama3.1-70b',
       messages: [{ role: 'system', content: system }, ...messages],
       max_tokens: MAX_TOKENS,
       temperature: 0.3,

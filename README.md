@@ -33,7 +33,7 @@ A floating "Ask Bazaarly" button on the Events pages opens a chat about your sal
 
 1. Copy `finance/env.example` to `finance/.env` and pick a provider with `LLM_PROVIDER`:
    - `mock` (default): no keys, answers are built from your numbers. Good for demos and testing.
-   - `snowflake`: Snowflake Cortex REST (`/api/v2/cortex/inference:complete`). Set `SNOWFLAKE_ACCOUNT` (the identifier you use for Snowsight) and `SNOWFLAKE_TOKEN` (a programmatic access token; set `SNOWFLAKE_TOKEN_TYPE` for JWT or OAuth). Choose a model with `CORTEX_MODEL`.
+   - `snowflake`: Snowflake Cortex REST (`/api/v2/cortex/inference:complete`). Set `SNOWFLAKE_ACCOUNT_URL` (your account URL, e.g. `https://myorg-myaccount.snowflakecomputing.com`) and `SNOWFLAKE_PAT` (a programmatic access token). Choose a model with `SNOWFLAKE_MODEL`.
    - `anthropic`: set `ANTHROPIC_API_KEY`.
 2. Start the service with `node finance/server.js` (it listens on port 3001).
 3. Set `VITE_FINANCE_API_URL` in `.env.local` if the service is not at `http://localhost:3001`.
