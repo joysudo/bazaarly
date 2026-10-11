@@ -225,6 +225,22 @@ export function ScanSessionModal({ open, onClose, events, onSessionComplete }: S
     lastAttemptRef.current = performance.now(); // keep message visible briefly
   }
 
+  function stopCamera() {
+    trackActiveRef.current = false;
+    if (hlIntervalRef.current) { 
+      clearInterval(hlIntervalRef.current); 
+      hlIntervalRef.current = null; 
+    }
+    hlBusyRef.current = false;
+    clearHighlightTracking();
+
+    const v = videoRef.current;
+    if (v?.srcObject) {
+      (v.srcObject as MediaStream).getTracks().forEach(t => t.stop());
+      v.srcObject = null;
+    }
+  }
+
   // ── Scan state machine ─────────────────────────────────────────────────────
 
   function handleScanResult(result: ScanResult) {
@@ -719,6 +735,7 @@ export function ScanSessionModal({ open, onClose, events, onSessionComplete }: S
       v.srcObject = null;
     }
     onClose();
+    stopCamera();
   }
 
   // ── Render ─────────────────────────────────────────────────────────────────
@@ -799,7 +816,8 @@ function renderConfirm() {
             {sessionItems.length} approved
           </span>
           <div style={{ flex: 1 }} />
-          <Button variant="secondary" onClick={() => setPhase('wrapup')} style={{ fontSize: 'var(--text-body-sm)' }}>
+          
+          <Button variant="secondary" onClick={() => {stopCamera(); setPhase('wrapup');}} style={{ fontSize: 'var(--text-body-sm)' }}>
             End Session →
           </Button>
           <Button variant="icon" onClick={handleClose}>✕</Button>
@@ -986,7 +1004,6 @@ function renderConfirm() {
               <option value="">No event</option>
               {events.map(ev => <option key={ev.id} value={ev.id}>{ev.name}{ev.status === 'past' ? ' (past)' : ''}</option>)}
             </select>
-            {statusMsg && <p style={{ margin: 'var(--space-sm) 0 0', color: 'var(--color-accent-magenta)', fontSize: 'var(--text-body-sm)' }}>{statusMsg}</p>}
             <div style={{ display: 'flex', gap: 'var(--space-sm)', justifyContent: 'flex-end', marginTop: 'var(--space-lg)' }}>
               <Button variant="secondary" onClick={handleClose} style={{ fontSize: 'var(--text-body-sm)' }}>Discard session</Button>
               <Button variant="primary" onClick={handleWrapup} disabled={wrapping} style={{ fontSize: 'var(--text-body-sm)' }}>
