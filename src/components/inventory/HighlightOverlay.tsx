@@ -61,7 +61,7 @@ export function HighlightOverlay({ highlight, width, height }: Props) {
       ref={canvasRef}
       width={width}
       height={height}
-      style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', pointerEvents: 'none' }}
+      style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'contain', pointerEvents: 'none' }}
     />
   );
 }

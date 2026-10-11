@@ -192,7 +192,6 @@ export function ScanSessionModal({ open, onClose, events, onSessionComplete }: S
   const stillReadyRef  = useRef(false);
   const lastAttemptRef = useRef(0);
   const hlBusyRef      = useRef(false);
-  const highlightErrorRef = useRef<string | null>(null);
   const thRef          = useRef(120);  // tracking canvas height (recalculated from video aspect)
   const sadRef         = useRef<Float64Array | null>(null);
 
@@ -432,10 +431,6 @@ export function ScanSessionModal({ open, onClose, events, onSessionComplete }: S
   function updateGate(now: number) {
     const trk   = trkRef.current;
     const still = stillRef.current;
-    if (highlightErrorRef.current) {
-      setStatus(`Outline request failed: ${highlightErrorRef.current}`);
-      return;
-    }
     const fresh = !!(trk.hl && now - trk.hl.at < STALE_MS);
     if (!fresh) { still.bbox = null; still.ref = null; still.since = 0; stillReadyRef.current = false; }
     else stillReadyRef.current = !!(still.bbox && now - still.since >= STILL_MS);
@@ -513,20 +508,10 @@ export function ScanSessionModal({ open, onClose, events, onSessionComplete }: S
       hc.width = w; hc.height = h;
       hc.getContext('2d')!.drawImage(video, 0, 0, w, h);
       const sentX = trkRef.current.cumX, sentY = trkRef.current.cumY;
-      const blob  = await new Promise<Blob>((resolve, reject) => hc.toBlob(b => b ? resolve(b) : reject(new Error('Capture failed')), 'image/jpeg', 0.6));
+      const blob  = await new Promise<Blob>(r => hc.toBlob(r, 'image/jpeg', 0.6));
       const data  = await fetchHighlight(blob);
-      if (data && scanStateRef.current === 'scanning') {
-        highlightErrorRef.current = null;
-        setKeyframe(data.highlight, sentX, sentY);
-      }
-    } catch (e) {
-      if (scanStateRef.current === 'scanning') {
-        const message = e instanceof Error ? e.message : 'Unknown error';
-        if (highlightErrorRef.current !== message) console.error('Garment highlight request failed:', e);
-        highlightErrorRef.current = message;
-        setStatus(`Outline request failed: ${message}`);
-      }
-    }
+      if (data && scanStateRef.current === 'scanning') setKeyframe(data.highlight, sentX, sentY);
+    } catch { /* next tick retries */ }
     finally { hlBusyRef.current = false; }
   }
 
@@ -536,7 +521,6 @@ export function ScanSessionModal({ open, onClose, events, onSessionComplete }: S
   useEffect(() => {
     if (!open || phase !== 'scanning') return;
     let cameraActive = true;
-    highlightErrorRef.current = null;
 
     navigator.mediaDevices
       .getUserMedia({ video: { facingMode: 'environment' }, audio: false })
@@ -563,7 +547,6 @@ export function ScanSessionModal({ open, onClose, events, onSessionComplete }: S
       trackActiveRef.current = false;
       if (hlIntervalRef.current) { clearInterval(hlIntervalRef.current); hlIntervalRef.current = null; }
       hlBusyRef.current = false;
-      highlightErrorRef.current = null;
       clearHighlightTracking();
       const v = videoRef.current;
       if (v?.srcObject) {
@@ -583,7 +566,6 @@ export function ScanSessionModal({ open, onClose, events, onSessionComplete }: S
       pendingIdRef.current = null;
       trackActiveRef.current = false;
       hlBusyRef.current = false;
-      highlightErrorRef.current = null;
       clearHighlightTracking();
       setScanStateSync('idle');
       setPhase('confirm');
