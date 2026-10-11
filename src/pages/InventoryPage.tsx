@@ -67,6 +67,21 @@ export function InventoryPage() {
       mainColors: payload.mainColors,
       searchText: payload.searchText,
       artwork: payload.artwork,
+      visionDetails: {
+        schemaVersion: garmentItem.schema_version,
+        fullDescription: garmentItem.descriptions?.full_description ?? '',
+        sections: garmentItem.descriptions?.sections ?? {},
+        notVisible: garmentItem.descriptions?.not_visible ?? [],
+        ...(garmentItem.model_info ? {
+          model: {
+            name: garmentItem.model_info.vlm,
+            promptVersion: garmentItem.model_info.prompt_version,
+            latencySeconds: garmentItem.model_info.latency_s,
+            inputTokens: garmentItem.model_info.input_tokens,
+            outputTokens: garmentItem.model_info.output_tokens,
+          },
+        } : {}),
+      },
       eventId: payload.eventId,
       createdAt: new Date().toISOString(),
     });
