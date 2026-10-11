@@ -4,7 +4,7 @@ import type { ScanResult, ResolveResult, EchoResult } from './types';
 
 // const BASE_URL = 'http://152.23.49.69:8000';
 // const BASE_URL = 'http://0.0.0.0:8000';
-const BASE_URL = '/vision-api';
+const BASE_URL = import.meta.env.VITE_API_URL || '/vision-api';
 
 export function getSessionId(): string {
   let id = localStorage.getItem('garmentSessionId');
