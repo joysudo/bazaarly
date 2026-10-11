@@ -1,9 +1,12 @@
 import React, { useState, useEffect } from 'react';
-import { collection, getDocs, doc, query, where, writeBatch } from 'firebase/firestore';
+import {
+  collection, getDocs, onSnapshot, query, where,
+} from 'firebase/firestore';
 import { db } from '../lib/firebase';
 import type { BazaarlyEvent, CartItem, InventoryItem } from '../lib/types';
 import { Button } from '../components/ui/Button';
 import { Input } from '../components/ui/Input';
+import { Modal } from '../components/ui/Modal';
 
 const KIOSK_PASSWORD = 'bazaarly';
 
@@ -24,7 +27,8 @@ export function KioskPage({ onExit }: KioskPageProps) {
   const [search, setSearch] = useState('');
   const [exitPassword, setExitPassword] = useState('');
   const [showExitPrompt, setShowExitPrompt] = useState(false);
-  const [checkingOut, setCheckingOut] = useState(false);
+  const [checkoutError, setCheckoutError] = useState('');
+  const [checkoutUrl, setCheckoutUrl] = useState<string | null>(null);
 
   useEffect(() => {
     async function loadEvents() {
@@ -33,13 +37,6 @@ export function KioskPage({ onExit }: KioskPageProps) {
     }
     loadEvents();
   }, []);
-
-  async function loadEventItems(eventId: string) {
-    const snap = await getDocs(
-      query(collection(db, 'inventory'), where('eventId', '==', eventId), where('status', '==', 'approved'))
-    );
-    setItems(snap.docs.map(d => ({ id: d.id, ...d.data() } as InventoryItem)));
-  }
 
   function handleSelectEvent(event: BazaarlyEvent) {
     setSelectedEvent(event);
@@ -53,11 +50,40 @@ export function KioskPage({ onExit }: KioskPageProps) {
       setPasswordError('Incorrect password');
       return;
     }
-    loadEventItems(selectedEvent!.id);
     setStep('active');
   }
 
+  useEffect(() => {
+    if (step !== 'active' || !selectedEvent) return;
+
+    const itemsQuery = query(
+      collection(db, 'inventory'),
+      where('eventId', '==', selectedEvent.id),
+      where('status', '==', 'approved')
+    );
+    return onSnapshot(itemsQuery, snapshot => {
+      const nextItems = snapshot.docs.map(d => ({ id: d.id, ...d.data() } as InventoryItem));
+      const itemsById = new Map(nextItems.map(item => [item.id, item]));
+      setItems(nextItems);
+      setCart(current => current.flatMap(cartItem => {
+        const currentItem = itemsById.get(cartItem.itemId);
+        return currentItem
+          ? [{
+            ...cartItem,
+            price: hasValidSalePrice(currentItem.price) ? currentItem.price : 0,
+            title: currentItem.title,
+            imageUrl: currentItem.imageUrl,
+          }]
+          : [];
+      }));
+      setCheckoutError('');
+    }, error => {
+      setCheckoutError(`Could not refresh event inventory: ${error.message}`);
+    });
+  }, [selectedEvent, step]);
+
   function addToCart(item: InventoryItem) {
+    if (!hasValidSalePrice(item.price)) return;
     if (cart.some(c => c.itemId === item.id)) return;
     setCart(prev => [...prev, { itemId: item.id, price: item.price, title: item.title, imageUrl: item.imageUrl }]);
   }
@@ -66,23 +92,31 @@ export function KioskPage({ onExit }: KioskPageProps) {
     setCart(prev => prev.filter(c => c.itemId !== itemId));
   }
 
-  async function handleCheckout() {
-    if (cart.length === 0) return;
-    setCheckingOut(true);
+  function handleCheckout() {
+    setCheckoutError('');
+    const checkoutUrl = import.meta.env.VITE_SOLANA_CHECKOUT_URL;
+    if (!checkoutUrl) {
+      setCheckoutError('Configure VITE_SOLANA_CHECKOUT_URL to enable Solana Pay checkout.');
+      return;
+    }
+    if (!selectedEvent || cart.length === 0) return;
+    if (cart.some(item => !hasValidSalePrice(item.price))) {
+      setCheckoutError('An item in the cart has no valid price. Exit kiosk mode and set its price in Inventory before checkout.');
+      return;
+    }
+
     try {
-      const batch = writeBatch(db);
-      let totalRevenue = selectedEvent!.grossRevenue ?? 0;
-      for (const cartItem of cart) {
-        batch.update(doc(db, 'inventory', cartItem.itemId), { status: 'sold' });
-        totalRevenue += cartItem.price;
+      const url = new URL(checkoutUrl);
+      if (url.protocol !== 'http:' && url.protocol !== 'https:') {
+        throw new Error('The Solana checkout URL must use HTTP or HTTPS.');
       }
-      batch.update(doc(db, 'events', selectedEvent!.id), { grossRevenue: totalRevenue });
-      await batch.commit();
-      const soldIds = new Set(cart.map(c => c.itemId));
-      setItems(prev => prev.filter(item => !soldIds.has(item.id)));
-      setCart([]);
-    } finally {
-      setCheckingOut(false);
+      url.searchParams.set('eventId', selectedEvent.id);
+      url.searchParams.delete('itemId');
+      for (const item of cart) url.searchParams.append('itemId', item.itemId);
+
+      setCheckoutUrl(url.toString());
+    } catch (error) {
+      setCheckoutError(error instanceof Error ? error.message : 'The Solana checkout URL is invalid.');
     }
   }
 
@@ -99,7 +133,8 @@ export function KioskPage({ onExit }: KioskPageProps) {
     onExit();
   }
 
-  const cartTotal = cart.reduce((sum, item) => sum + item.price, 0);
+  const cartTotal = cart.reduce((sum, item) => sum + (hasValidSalePrice(item.price) ? item.price : 0), 0);
+  const checkoutConfigured = Boolean(import.meta.env.VITE_SOLANA_CHECKOUT_URL);
   const cartItemIds = new Set(cart.map(c => c.itemId));
   const filteredItems = items.filter(item =>
     !cartItemIds.has(item.id) &&
@@ -291,13 +326,18 @@ export function KioskPage({ onExit }: KioskPageProps) {
               <Button
                 variant="primary"
                 onClick={handleCheckout}
-                disabled={checkingOut}
+                disabled={!checkoutConfigured}
                 style={{ width: '100%', justifyContent: 'center' }}
               >
-                {checkingOut ? 'Processing…' : `Checkout — $${cartTotal.toFixed(2)}`}
+                {checkoutConfigured ? `Pay with Solana — $${cartTotal.toFixed(2)}` : 'Configure Solana Pay checkout'}
               </Button>
+              {checkoutError && (
+                <p role="alert" style={{ margin: 'var(--space-sm) 0 0', color: 'var(--color-accent-magenta)', fontSize: 'var(--text-body-sm)' }}>
+                  {checkoutError}
+                </p>
+              )}
               <p style={{ margin: '6px 0 0', fontFamily: 'var(--font-mono)', fontSize: 10, textAlign: 'center', opacity: 0.35, textTransform: 'uppercase', letterSpacing: '0.5px' }}>
-                Solana Pay — coming soon
+                Items update after payment confirms on Solana Devnet.
               </p>
             </div>
           )}
@@ -336,14 +376,21 @@ export function KioskPage({ onExit }: KioskPageProps) {
                   <div
                     key={item.id}
                     onClick={() => addToCart(item)}
+                    aria-disabled={!hasValidSalePrice(item.price)}
                     style={{
-                      cursor: 'pointer',
+                      cursor: hasValidSalePrice(item.price) ? 'pointer' : 'not-allowed',
                       borderRadius: 'var(--radius-md)',
                       overflow: 'hidden',
                       background: 'var(--color-surface-soft)',
                       transition: 'box-shadow 0.15s, transform 0.1s',
+                      opacity: hasValidSalePrice(item.price) ? 1 : 0.65,
                     }}
-                    onMouseEnter={e => { e.currentTarget.style.boxShadow = '0 4px 16px rgba(0,0,0,0.1)'; e.currentTarget.style.transform = 'translateY(-2px)'; }}
+                    onMouseEnter={e => {
+                      if (hasValidSalePrice(item.price)) {
+                        e.currentTarget.style.boxShadow = '0 4px 16px rgba(0,0,0,0.1)';
+                        e.currentTarget.style.transform = 'translateY(-2px)';
+                      }
+                    }}
                     onMouseLeave={e => { e.currentTarget.style.boxShadow = 'none'; e.currentTarget.style.transform = 'none'; }}
                   >
                     <div style={{ aspectRatio: '1 / 1', overflow: 'hidden', background: 'var(--color-hairline-soft)' }}>
@@ -354,8 +401,15 @@ export function KioskPage({ onExit }: KioskPageProps) {
                       )}
                     </div>
                     <div style={{ padding: 'var(--space-sm)' }}>
-                      <div style={{ fontWeight: 700, fontSize: 'var(--text-body-sm)', marginBottom: 2 }}>${item.price.toFixed(2)}</div>
+                      <div style={{ fontWeight: 700, fontSize: 'var(--text-body-sm)', marginBottom: 2 }}>
+                        {hasValidSalePrice(item.price) ? `$${item.price.toFixed(2)}` : 'Price required'}
+                      </div>
                       <div style={{ fontSize: 13, opacity: 0.65, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{item.title}</div>
+                      {!hasValidSalePrice(item.price) && (
+                        <div style={{ marginTop: 4, fontSize: 11, color: 'var(--color-accent-magenta)' }}>
+                          Set a price in Inventory to sell
+                        </div>
+                      )}
                     </div>
                   </div>
                 ))}
@@ -422,6 +476,47 @@ export function KioskPage({ onExit }: KioskPageProps) {
           </div>
         </div>
       )}
+
+      <Modal
+        open={checkoutUrl !== null}
+        onClose={() => setCheckoutUrl(null)}
+        title="Solana checkout"
+        maxWidth={900}
+      >
+        {checkoutUrl && (
+          <>
+            <p style={{ margin: '0 0 var(--space-md)', opacity: 0.65, fontSize: 'var(--text-body-sm)', lineHeight: 1.5 }}>
+              Keep checkout open until the receipt appears. To scan the Solana Pay QR code, use a wallet on another device.
+            </p>
+            <iframe
+              src={checkoutUrl}
+              title="Bazaarly Solana checkout"
+              style={{
+                display: 'block',
+                width: '100%',
+                height: 'min(68vh, 680px)',
+                minHeight: 360,
+                border: '1px solid var(--color-hairline)',
+                borderRadius: 'var(--radius-md)',
+                background: 'var(--color-canvas)',
+              }}
+            />
+            <a
+              href={checkoutUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              style={{
+                display: 'inline-block',
+                marginTop: 'var(--space-md)',
+                color: 'var(--color-ink)',
+                fontSize: 'var(--text-body-sm)',
+              }}
+            >
+              Having trouble? Open checkout in a new tab
+            </a>
+          </>
+        )}
+      </Modal>
     </div>
   );
 }
@@ -451,4 +546,8 @@ function CenteredFrame({ children, bg, maxWidth = 480 }: { children: React.React
       </div>
     </div>
   );
+}
+
+function hasValidSalePrice(price: unknown): price is number {
+  return typeof price === 'number' && Number.isFinite(price) && Math.round(price * 100) > 0;
 }

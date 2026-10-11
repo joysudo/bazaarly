@@ -35,12 +35,16 @@ export function Modal({ open, onClose, title, children, maxWidth = 560 }: ModalP
     >
       <div
         onClick={e => e.stopPropagation()}
+        role="dialog"
+        aria-modal="true"
+        aria-label={title}
         style={{
           background: 'var(--color-canvas)',
           borderRadius: 'var(--radius-xl)',
           padding: 'var(--space-xl)',
           maxWidth,
           width: '100%',
+          boxSizing: 'border-box',
           maxHeight: '90vh',
           overflowY: 'auto',
         }}
