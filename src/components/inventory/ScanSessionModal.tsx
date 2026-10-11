@@ -13,7 +13,7 @@ import { Input } from '../ui/Input';
 
 // ── Expert scanner constants ──────────────────────────────────────────────────
 const SCAN_INTERVAL_MS = 1500;  // min gap between scan attempts once still
-const STILL_MS         = 20;  // garment must hold this long before a photo is taken
+const STILL_MS         = 1000;  // garment must hold this long before a photo is taken
 const STILL_BOX        = 0.1;  // max outline edge drift (fraction of frame) that counts as still
 const STILL_DIFF       = 12;     // max mean pixel change inside garment that counts as still
 const HL_INTERVAL_MS   = 150;   // how often to poll /scan/highlight
@@ -229,6 +229,7 @@ export function ScanSessionModal({ open, onClose, events, onSessionComplete }: S
 
   function handleScanResult(result: ScanResult) {
     // Overlay is managed by the tracking loop — scan results don't touch it
+    // console.log('Scan response:', result);
     switch (result.result) {
       case 'new_item':
       case 'awaiting_approval':
@@ -247,13 +248,16 @@ export function ScanSessionModal({ open, onClose, events, onSessionComplete }: S
         setStatus('Pending duplicate — confirm below');
         break;
       case 'rejected':
-        setStatus('Too blurry — hold the item steady');
+        setStatus('Too blurry. Hold the item steady or wipe the camera lens');
         break;
       case 'no_garment':
-        setStatus('No garment detected — hold one up');
+        setStatus('No garment detected. Hold one up');
         break;
       case 'suppressed':
         setStatus('Same item still in view');
+        break;
+      case 'cooldown':
+        setStatus('Taking a breath… cooldown active');
         break;
       default:
         setStatus('Hold still…');
@@ -309,17 +313,19 @@ export function ScanSessionModal({ open, onClose, events, onSessionComplete }: S
       const blob = await new Promise<Blob>((resolve, reject) =>
         canvas.toBlob(b => b ? resolve(b) : reject(new Error('Capture failed')), 'image/jpeg', 0.9)
       );
+      
+      setStatus('Uploading & analyzing…');
       const result = await uploadFrame(blob);
       if (scanStateRef.current === 'scanning') handleScanResult(result);
     } catch (e) {
       setStatus('Scan error: ' + (e instanceof Error ? e.message : 'Unknown'));
     } finally {
       busyRef.current = false;
-      lastAttemptRef.current = performance.now(); // keeps result message visible briefly
+      lastAttemptRef.current = performance.now();
     }
   };
   scanTickRef.current = scanTickFn; // always fresh — called from trackLoop via ref
-
+  
   // ── Expert scanner: tracking helpers ──────────────────────────────────────
 
   function syncTH() {
@@ -731,33 +737,56 @@ export function ScanSessionModal({ open, onClose, events, onSessionComplete }: S
 
   // ── Phase renders ──────────────────────────────────────────────────────────
 
-  function renderConfirm() {
+function renderConfirm() {
     return (
-      <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 'var(--space-xl)' }}>
-        <div style={{ maxWidth: 480, width: '100%', textAlign: 'center' }}>
-          <div style={{ fontFamily: 'var(--font-mono)', fontSize: 11, textTransform: 'uppercase', letterSpacing: '0.6px', opacity: 0.4, marginBottom: 'var(--space-md)' }}>
-            Scan Session
-          </div>
-          <h2 style={{ margin: '0 0 var(--space-md)', fontSize: 'clamp(32px, 4vw, 48px)', fontWeight: 340, letterSpacing: '-0.8px', lineHeight: 1.1 }}>
-            Ready to scan?
-          </h2>
-          <p style={{ margin: '0 0 var(--space-xl)', fontSize: 'var(--text-body)', opacity: 0.6, lineHeight: 1.65 }}>
-            Hold items up to your camera one at a time. The AI detects garments automatically — it waits until the item is held still before photographing, so no button-pressing required.
-          </p>
-          {statusMsg && (
-            <p style={{ color: 'var(--color-accent-magenta)', fontSize: 'var(--text-body-sm)', marginBottom: 'var(--space-md)' }}>
-              {statusMsg}
+      <>
+        <style>{`
+          @keyframes stepFadeIn {
+            from {
+              opacity: 0;
+              transform: translateY(12px);
+            }
+            to {
+              opacity: 1;
+              transform: translateY(0);
+            }
+          }
+        `}</style>
+        <div 
+          style={{ 
+            flex: 1, 
+            display: 'flex', 
+            alignItems: 'center', 
+            justifyContent: 'center', 
+            padding: 'var(--space-xl)',
+            animation: 'stepFadeIn 0.3s cubic-bezier(0.16, 1, 0.3, 1) forwards'
+          }}
+        >
+          <div style={{ maxWidth: 480, width: '100%', textAlign: 'center' }}>
+            <div style={{ fontFamily: 'var(--font-mono)', fontSize: 11, textTransform: 'uppercase', letterSpacing: '0.6px', opacity: 0.4, marginBottom: 'var(--space-md)' }}>
+              Scan Session
+            </div>
+            <h2 style={{ margin: '0 0 var(--space-md)', fontSize: 'clamp(32px, 4vw, 48px)', fontWeight: 340, letterSpacing: '-0.8px', lineHeight: 1.1 }}>
+              Ready to scan?
+            </h2>
+            <p style={{ margin: '0 0 var(--space-xl)', fontSize: 'var(--text-body)', opacity: 0.6, lineHeight: 1.65 }}>
+              Hold items up to your camera one at a time. The AI detects garments automatically — it waits until the item is held still before photographing, so no button-pressing required.
             </p>
-          )}
-          <div style={{ display: 'flex', gap: 'var(--space-sm)', justifyContent: 'center' }}>
-            <Button variant="secondary" onClick={handleClose}>Cancel</Button>
-            <Button variant="primary" onClick={() => setPhase('scanning')}>Start Scanning</Button>
+            {statusMsg && (
+              <p style={{ color: 'var(--color-accent-magenta)', fontSize: 'var(--text-body-sm)', marginBottom: 'var(--space-md)' }}>
+                {statusMsg}
+              </p>
+            )}
+            <div style={{ display: 'flex', gap: 'var(--space-sm)', justifyContent: 'center' }}>
+              <Button variant="secondary" onClick={handleClose}>Cancel</Button>
+              <Button variant="primary" onClick={() => setPhase('scanning')}>Start Scanning</Button>
+            </div>
           </div>
         </div>
-      </div>
+      </>
     );
   }
-
+  
   function renderScanning() {
     return (
       <>
