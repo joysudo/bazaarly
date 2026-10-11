@@ -107,6 +107,7 @@ export function UploadModal({ open, onClose, events, onItemApproved }: UploadMod
     await approveItem(item.item_id);
     await onItemApproved(item, payload);
     setPendingItems(prev => prev.filter(i => i.item_id !== item.item_id));
+    if (pendingItems.length === 1 && !uploading) handleClose();
   }
 
   async function handleDiscard(item: GarmentItem) {
