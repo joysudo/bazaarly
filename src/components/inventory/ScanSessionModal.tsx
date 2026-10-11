@@ -13,9 +13,9 @@ import { Input } from '../ui/Input';
 
 // ── Expert scanner constants ──────────────────────────────────────────────────
 const SCAN_INTERVAL_MS = 1500;  // min gap between scan attempts once still
-const STILL_MS         = 2000;  // garment must hold this long before a photo is taken
-const STILL_BOX        = 0.03;  // max outline edge drift (fraction of frame) that counts as still
-const STILL_DIFF       = 6;     // max mean pixel change inside garment that counts as still
+const STILL_MS         = 20;  // garment must hold this long before a photo is taken
+const STILL_BOX        = 0.1;  // max outline edge drift (fraction of frame) that counts as still
+const STILL_DIFF       = 12;     // max mean pixel change inside garment that counts as still
 const HL_INTERVAL_MS   = 150;   // how often to poll /scan/highlight
 const FILL_ALPHA       = 0.05;  // mask fill opacity
 const STALE_MS         = 1500;  // hide overlay if server stops responding
@@ -508,8 +508,9 @@ export function ScanSessionModal({ open, onClose, events, onSessionComplete }: S
       hc.width = w; hc.height = h;
       hc.getContext('2d')!.drawImage(video, 0, 0, w, h);
       const sentX = trkRef.current.cumX, sentY = trkRef.current.cumY;
-      const blob  = await new Promise<Blob>(r => hc.toBlob(r, 'image/jpeg', 0.6));
-      const data  = await fetchHighlight(blob);
+      const blob = await new Promise<Blob | null>(r => hc.toBlob(r, 'image/jpeg', 0.6));
+      if (!blob) return;
+      const data = await fetchHighlight(blob);
       if (data && scanStateRef.current === 'scanning') setKeyframe(data.highlight, sentX, sentY);
     } catch { /* next tick retries */ }
     finally { hlBusyRef.current = false; }
