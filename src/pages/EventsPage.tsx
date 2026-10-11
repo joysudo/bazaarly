@@ -249,7 +249,7 @@ export function EventsPage({ selectedEvent, onSelectEvent, onCloseDashboard }: E
               </h1>
             </div>
           </div>
-          <div style={{padding: 'var(--space-xxl) 0'}}>
+          <div style={{padding: 'var(--space-xxl) 0', pointerEvents: 'auto'}}>
             <Button variant="primary" onClick={() => setShowCreate(true)}>
               + Create Event
             </Button>

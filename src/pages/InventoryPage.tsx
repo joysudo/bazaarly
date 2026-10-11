@@ -313,7 +313,7 @@ export function InventoryPage() {
               </h1>
             </div>
           </div>
-          <div style={{ display: 'flex', gap: 'var(--space-sm)', padding: 'var(--space-xxl) 0' }}>
+          <div style={{ display: 'flex', gap: 'var(--space-sm)', padding: 'var(--space-xxl) 0', pointerEvents: 'auto' }}>
             <Button variant="secondary" onClick={() => setShowScan(true)}>📷 Begin Scan</Button>
             <Button variant="primary" onClick={() => setShowUpload(true)}>+ Upload Images</Button>
           </div>
