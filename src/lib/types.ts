@@ -24,6 +24,19 @@ export interface InventoryItem {
   mainColors?: string[];
   searchText?: string[];
   artwork?: string;
+  visionDetails?: {
+    schemaVersion?: string;
+    fullDescription?: string;
+    sections?: Record<string, string>;
+    notVisible?: string[];
+    model?: {
+      name: string;
+      promptVersion: string;
+      latencySeconds: number;
+      inputTokens: number | null;
+      outputTokens: number | null;
+    };
+  };
 }
 
 export interface ApprovePayload {
