@@ -10,6 +10,7 @@ import { EventCard } from '../components/events/EventCard';
 import { CreateEventModal } from '../components/events/CreateEventModal';
 import { EventDashboard } from '../components/events/EventDashboard';
 import { EventComparison } from '../components/events/EventComparison';
+import { AdviceChat } from '../components/advice/AdviceChat';
 import MoltenMetal from '../components/ui/MoltenMetal';
 import catstand from '../assets/catstand.png'; 
 
@@ -171,6 +172,7 @@ export function EventsPage({ selectedEvent, onSelectEvent, onCloseDashboard }: E
 
   if (selectedEvent) {
     return (
+      <>
       <EventDashboard
         event={events.find(event => event.id === selectedEvent.id) ?? selectedEvent}
         onClose={onCloseDashboard}
@@ -180,6 +182,8 @@ export function EventsPage({ selectedEvent, onSelectEvent, onCloseDashboard }: E
         upcomingEvents={events.filter(event => event.status === 'upcoming' && event.id !== selectedEvent.id)}
         onTransferInventory={(targetEventId, newEvent) => handleTransferInventory(selectedEvent, targetEventId, newEvent)}
       />
+      <AdviceChat events={events} focusEventId={selectedEvent.id} />
+      </>
     );
   }
 
@@ -340,6 +344,7 @@ export function EventsPage({ selectedEvent, onSelectEvent, onCloseDashboard }: E
       {showComparison && (
         <EventComparison events={past} onClose={() => setShowComparison(false)} />
       )}
+      {!loading && <AdviceChat events={events} />}
     </main>
   );
 }
