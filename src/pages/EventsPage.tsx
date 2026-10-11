@@ -9,6 +9,7 @@ import { EventCard } from '../components/events/EventCard';
 import { CreateEventModal } from '../components/events/CreateEventModal';
 import { EventDashboard } from '../components/events/EventDashboard';
 import { EventComparison } from '../components/events/EventComparison';
+import MoltenMetal from '../components/ui/MoltenMetal';
 
 type EventDraft = Omit<BazaarlyEvent, 'id' | 'createdAt' | 'inventoryIds' | 'grossRevenue' | 'status'>;
 type NewEventDraft = Pick<EventDraft, 'name' | 'date' | 'description' | 'vendorFee'>;
@@ -180,9 +181,34 @@ export function EventsPage({ selectedEvent, onSelectEvent, onCloseDashboard }: E
   return (
     <main style={{ flex: 1 }}>
       {/* Hero color block */}
-      <div style={{ background: 'var(--color-block-lime)' }}>
+      <div style={{ background: '#dceeb1', position: 'relative', overflow: 'hidden' }}>
+        <div style={{ position: 'absolute', inset: 0 }}>
+          <MoltenMetal
+            lightMode={true}
+            backgroundColor="#4ba48b"
+            color1="#35b2b4"
+            color2="#9ffeff"
+            color3="#ffffff"
+            speed={0.2}
+            scale={3.5}
+            detail={3}
+            glow={2.2}
+            coreSize={0.1}
+            swirl={0.7}
+            fold={-0.15}
+            blackPoint={0}
+            brightness={2.4}
+            colorMode="molten"
+            grain={false}
+            grainIntensity={0}
+            mouseInteraction={true}
+            mouseStrength={0.15}
+            opacity={1.0}
+          />
+        </div>
         <div
           style={{
+            position: 'relative', zIndex: 1,
             maxWidth: 1280,
             margin: '0 auto',
             padding: 'var(--space-xxl) var(--space-xxl)',
@@ -191,6 +217,7 @@ export function EventsPage({ selectedEvent, onSelectEvent, onCloseDashboard }: E
             justifyContent: 'space-between',
             flexWrap: 'wrap',
             gap: 'var(--space-md)',
+            pointerEvents: 'none'
           }}
         >
           <div>

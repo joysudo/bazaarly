@@ -12,6 +12,7 @@ import { InventoryCard } from '../components/inventory/InventoryCard';
 import { UploadModal } from '../components/inventory/UploadModal';
 import { ScanSessionModal } from '../components/inventory/ScanSessionModal';
 import { ItemDetailModal } from '../components/inventory/ItemDetailModal';
+import MoltenMetal from '../components/ui/MoltenMetal';
 
 type SortBy = 'newest' | 'oldest' | 'price-asc' | 'price-desc';
 
@@ -276,8 +277,32 @@ export function InventoryPage() {
   return (
     <main style={{ flex: 1 }}>
       {/* Header */}
-      <div style={{ background: 'var(--color-block-lilac)' }}>
-        <div style={{ maxWidth: 1280, margin: '0 auto', padding: 'var(--space-xxl)', display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between', flexWrap: 'wrap', gap: 'var(--space-md)' }}>
+      <div style={{ background: '#c5b0f4', position: 'relative', overflow: 'hidden' }}>
+        <div style={{ position: 'absolute', inset: 0 }}>
+          <MoltenMetal
+            lightMode={true}
+            backgroundColor="#4b78a4"
+            color1="#52e6ff"
+            color2="#9ffeff"
+            color3="#ffffff"
+            speed={0.2}
+            scale={3.5}
+            detail={3}
+            glow={2.2}
+            coreSize={0.1}
+            swirl={0.7}
+            fold={-0.15}
+            blackPoint={0}
+            brightness={2.4}
+            colorMode="molten"
+            grain={false}
+            grainIntensity={0}
+            mouseInteraction={true}
+            mouseStrength={0.15}
+            opacity={1.0}
+          />
+        </div>
+        <div style={{ position: 'relative', zIndex: 1, maxWidth: 1280, margin: '0 auto', padding: 'var(--space-xxl)', display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between', flexWrap: 'wrap', gap: 'var(--space-md)', pointerEvents: 'none'}}>
           <div>
             <div style={{ fontFamily: 'var(--font-mono)', fontSize: 'var(--text-eyebrow)', fontWeight: 400, letterSpacing: '0.54px', textTransform: 'uppercase', marginBottom: 'var(--space-xs)' }}>Inventory</div>
             <h1 style={{ margin: 0, fontSize: 'clamp(40px, 5vw, 64px)', fontWeight: 340, lineHeight: 1.1, letterSpacing: '-0.96px' }}>
