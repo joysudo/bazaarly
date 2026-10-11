@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useAuth } from '../contexts/AuthContext';
-import bazaarlylogo from '../assets/bazaarlylogo.png';
+// import bazaarlylogo from '../assets/bazaarlylogo.png';
 import bubblelarge from '../assets/bubblelarge.png';
 import bubblemedium from '../assets/bubblemedium.png';
 import bubblesmall from '../assets/bubblesmall.png';
@@ -71,7 +71,7 @@ export function LandingPage() {
           {/* Logo */}
           <div style={{ marginBottom: 'var(--space-xxl)' }}>
             <img
-              src={bazaarlylogo}
+              src='https://ibb.co/s9j224Zx'
               alt="Bazaarly"
               style={{ height: 36, display: 'inline-block' }}
             />

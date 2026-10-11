@@ -2,7 +2,7 @@ import { useState, useRef, useEffect } from 'react';
 import type { User } from 'firebase/auth';
 import { useAuth } from '../../contexts/AuthContext';
 import { Button } from '../ui/Button';
-import bazaarlylogo from '../../assets/bazaarlylogo.png';
+// import bazaarlylogo from '../../assets/bazaarlylogo.png';
 
 type Tab = 'events' | 'inventory' | 'kiosk';
 
@@ -76,7 +76,7 @@ export function TopNav({ activeTab, onTabChange, user }: TopNavProps) {
       >
         {/* Left: logo + tabs */}
         <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-lg)', flexWrap: 'wrap' }}>
-          <img src={bazaarlylogo} style={{ height: '1em', fontSize: 'var(--text-body-lg)' }} alt="Bazaarly" />
+          <img src='https://ibb.co/s9j224Zx' style={{ height: '1em', fontSize: 'var(--text-body-lg)' }} alt="Bazaarly" />
           <div style={{ display: 'flex', gap: 'var(--space-xxs)', flexWrap: 'wrap' }}>
             {([['events', 'Events'], ['inventory', 'Inventory']] as const).map(([tab, label]) => {
               const isActive = activeTab === tab;
