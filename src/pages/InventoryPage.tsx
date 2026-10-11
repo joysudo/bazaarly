@@ -279,7 +279,7 @@ export function InventoryPage() {
       <div style={{ background: 'var(--color-block-lilac)' }}>
         <div style={{ maxWidth: 1280, margin: '0 auto', padding: 'var(--space-xxl)', display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between', flexWrap: 'wrap', gap: 'var(--space-md)' }}>
           <div>
-            <div style={{ fontFamily: 'var(--font-mono)', fontSize: 'var(--text-eyebrow)', fontWeight: 400, letterSpacing: '0.54px', textTransform: 'uppercase', marginBottom: 'var(--space-sm)' }}>Inventory</div>
+            <div style={{ fontFamily: 'var(--font-mono)', fontSize: 'var(--text-eyebrow)', fontWeight: 400, letterSpacing: '0.54px', textTransform: 'uppercase', marginBottom: 'var(--space-xs)' }}>Inventory</div>
             <h1 style={{ margin: 0, fontSize: 'clamp(40px, 5vw, 64px)', fontWeight: 340, lineHeight: 1.1, letterSpacing: '-0.96px' }}>
               Your items,<br />organised
             </h1>

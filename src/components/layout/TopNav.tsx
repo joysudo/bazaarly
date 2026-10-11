@@ -50,34 +50,42 @@ export function TopNav({ activeTab, onTabChange }: TopNavProps) {
             {([
               ['events', 'Events'],
               ['inventory', 'Inventory'],
-            ] as const).map(([tab, label]) => (
-              <button
-                key={tab}
-                onClick={() => onTabChange(tab)}
-                aria-current={activeTab === tab ? 'page' : undefined}
-                style={{
-                  background: activeTab === tab ? 'var(--color-primary)' : 'transparent',
-                  color: activeTab === tab ? 'var(--color-on-primary)' : 'var(--color-ink)',
-                  borderRadius: 'var(--radius-pill)',
-                  padding: '6px 16px',
-                  border: 'none',
-                  cursor: 'pointer',
-                  fontFamily: 'var(--font-sans)',
-                  fontSize: 'var(--text-body-sm)',
-                  fontWeight: 480,
-                  whiteSpace: 'nowrap',
-                  transition: 'background 0.15s, color 0.15s',
-                }}
-              >
-                {label}
-              </button>
-            ))}
+            ] as const).map(([tab, label]) => {
+              const isActive = activeTab === tab;
+              return (
+                <button
+                  key={tab}
+                  onClick={() => onTabChange(tab)}
+                  aria-current={isActive ? 'page' : undefined}
+                  className="nav-tab-button"
+                  style={{
+                    background: 'transparent',
+                    color: isActive ? 'var(--color-ink)' : 'var(--color-ink)',
+                    opacity: isActive ? 0.8 : 0.6,
+                    // Wavy underline effect when active
+                    textDecoration: isActive ? 'underline wavy' : 'none',
+                    textUnderlineOffset: '3px', 
+                    borderRadius: 0,
+                    padding: '6px 12px',
+                    border: 'none',
+                    cursor: 'pointer',
+                    fontFamily: 'var(--font-sans)',
+                    fontSize: 'var(--text-body-lg)',
+                    fontWeight: isActive ? 600 : 480,
+                    whiteSpace: 'nowrap',
+                    transition: 'opacity 0.15s, text-decoration 0.15s',
+                  }}
+                >
+                  {label}
+                </button>
+              );
+            })}
           </div>
         </div>
         <Button
           variant="primary"
           onClick={() => onTabChange('kiosk')}
-          style={{ fontSize: 'var(--text-body-sm)', padding: '7px 16px', flexShrink: 0 }}
+          style={{ fontSize: 'var(--text-body)', padding: '7px 16px', flexShrink: 0 }}
         >
           Customer Display
         </Button>

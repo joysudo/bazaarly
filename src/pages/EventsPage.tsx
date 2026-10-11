@@ -201,7 +201,7 @@ export function EventsPage({ selectedEvent, onSelectEvent, onCloseDashboard }: E
                 fontWeight: 400,
                 letterSpacing: '0.54px',
                 textTransform: 'uppercase',
-                marginBottom: 'var(--space-sm)',
+                marginBottom: 'var(--space-xs)',
               }}
             >
               Events

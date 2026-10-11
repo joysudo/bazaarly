@@ -93,27 +93,29 @@ export function InventoryCard({ item, eventName, selected, onSelect, onClick, on
       <div style={{ padding: '10px var(--space-md) var(--space-md)' }}>
         {/* Price */}
         {item.price > 0 && (
-          <div style={{ fontWeight: 700, fontSize: 'var(--text-body-sm)', marginBottom: 2, color: isSold ? 'var(--color-ink)' : 'var(--color-ink)', opacity: isSold ? 0.45 : 1 }}>
+          <div style={{ fontWeight: 700, fontSize: 'var(--text-body-sm)', marginBottom: 0, color: isSold ? 'var(--color-ink)' : 'var(--color-ink)', opacity: isSold ? 0.45 : 1 }}>
             ${item.price.toFixed(2)}
           </div>
         )}
 
         {/* Name */}
-        <p style={{ margin: '0 0 2px', fontSize: 'var(--text-body-sm)', fontWeight: 480, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', opacity: isSold ? 0.5 : 1 }}>
+        <p style={{ margin: '0', fontSize: 'var(--text-body-sm)', fontWeight: 480, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', opacity: isSold ? 0.5 : 1 }}>
           {item.title || 'Untitled'}
         </p>
 
-        {/* Type */}
-        {item.garmentType && (
-          <p style={{ margin: 0, fontFamily: 'var(--font-mono)', fontSize: 11, textTransform: 'uppercase', letterSpacing: '0.4px', opacity: 0.4 }}>
-            {item.garmentType}
-          </p>
-        )}
+        <div style={{ margin: '0', fontSize: 11, display: 'flex'}}>
+          {/* Type */}
+          {item.garmentType && (
+            <span style={{ margin: 0, fontFamily: 'var(--font-mono)', fontSize: 11, fontWeight: 500, textTransform: 'uppercase', letterSpacing: '0.4px', opacity: 0.4, marginRight: 'auto' }}>
+              {item.garmentType}
+            </span>
+          )}
 
-        {/* Event */}
-        <p style={{ margin: '2px 0 0', fontFamily: 'var(--font-mono)', fontSize: 11, textTransform: 'uppercase', letterSpacing: '0.4px', opacity: eventName ? 0.55 : 0.3 }}>
-          {eventName ?? 'Unassigned'}
-        </p>
+          {/* Event */}
+          <span style={{ margin: '0 0 0', fontFamily: 'var(--font-mono)', fontSize: 11, textTransform: 'uppercase', letterSpacing: '0.4px', opacity: eventName ? 0.55 : 0.3 }}>
+            {eventName ?? 'Unassigned'}
+          </span>
+        </div>
       </div>
     </div>
   );
