@@ -12,7 +12,7 @@ import { EventDashboard } from '../components/events/EventDashboard';
 import { EventComparison } from '../components/events/EventComparison';
 import { AdviceChat } from '../components/advice/AdviceChat';
 import MoltenMetal from '../components/ui/MoltenMetal';
-import catstand from '../assets/catstand.png'; 
+import catstand from '../assets/catstand.PNG';
 
 type EventDraft = Omit<BazaarlyEvent, 'id' | 'createdAt' | 'inventoryIds' | 'grossRevenue' | 'status'>;
 type NewEventDraft = Pick<EventDraft, 'name' | 'date' | 'description' | 'vendorFee'>;

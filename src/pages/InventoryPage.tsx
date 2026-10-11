@@ -14,7 +14,7 @@ import { UploadModal } from '../components/inventory/UploadModal';
 import { ScanSessionModal } from '../components/inventory/ScanSessionModal';
 import { ItemDetailModal } from '../components/inventory/ItemDetailModal';
 import MoltenMetal from '../components/ui/MoltenMetal';
-import catsit from '../assets/catsit.png'; 
+import catsit from '../assets/catsit.PNG';
 
 type SortBy = 'newest' | 'oldest' | 'price-asc' | 'price-desc';
 
