@@ -1,4 +1,5 @@
 import { Button } from '../ui/Button';
+import bazaarlylogo from '../../assets/bazaarlylogo.PNG';
 
 type Tab = 'events' | 'inventory' | 'kiosk';
 
@@ -38,13 +39,14 @@ export function TopNav({ activeTab, onTabChange }: TopNavProps) {
         <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-lg)', flexWrap: 'wrap' }}>
           <span
             style={{
-              fontWeight: 700,
+              display: 'inline-flex',
+              alignItems: 'center',
               fontSize: 'var(--text-body-lg)',
               letterSpacing: '-0.5px',
               color: 'var(--color-ink)',
             }}
           >
-            Bazaarly
+            <img src={bazaarlylogo} style={{height: '1em'}}/>
           </span>
           <div style={{ display: 'flex', gap: 'var(--space-xxs)', flexWrap: 'wrap' }}>
             {([
