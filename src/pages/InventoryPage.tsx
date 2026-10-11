@@ -1,9 +1,10 @@
 import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import {
-  collection, addDoc, getDocs, doc, query, orderBy,
+  collection, addDoc, getDocs, doc, query, orderBy, where,
   writeBatch, arrayUnion, updateDoc,
 } from 'firebase/firestore';
 import { db } from '../lib/firebase';
+import { useAuth } from '../contexts/AuthContext';
 import { mirrorItemImage } from '../lib/imageUtils';
 import type { BazaarlyEvent, GarmentItem, InventoryItem, ApprovePayload } from '../lib/types';
 import { Button } from '../components/ui/Button';
@@ -13,7 +14,7 @@ import { UploadModal } from '../components/inventory/UploadModal';
 import { ScanSessionModal } from '../components/inventory/ScanSessionModal';
 import { ItemDetailModal } from '../components/inventory/ItemDetailModal';
 import MoltenMetal from '../components/ui/MoltenMetal';
-import catsit from '../assets/catstand.png'; 
+import catsit from '../assets/catsit.png'; 
 
 type SortBy = 'newest' | 'oldest' | 'price-asc' | 'price-desc';
 
@@ -47,6 +48,7 @@ function priceInRange(price: number, range: string): boolean {
 }
 
 export function InventoryPage() {
+  const { user } = useAuth();
   const [items, setItems]   = useState<InventoryItem[]>([]);
   const [events, setEvents] = useState<BazaarlyEvent[]>([]);
   const [loading, setLoading] = useState(true);
@@ -80,14 +82,15 @@ export function InventoryPage() {
   // ── Data ─────────────────────────────────────────────────────────────────────
 
   const load = useCallback(async () => {
+    const uid = user!.uid;
     const [itemsSnap, eventsSnap] = await Promise.all([
-      getDocs(query(collection(db, 'inventory'), orderBy('createdAt', 'desc'))),
-      getDocs(query(collection(db, 'events'),    orderBy('date', 'desc'))),
+      getDocs(query(collection(db, 'inventory'), where('userId', '==', uid), orderBy('createdAt', 'desc'))),
+      getDocs(query(collection(db, 'events'),    where('userId', '==', uid), orderBy('date', 'desc'))),
     ]);
     setItems(itemsSnap.docs.map(d => ({ id: d.id, ...d.data() } as InventoryItem)));
     setEvents(eventsSnap.docs.map(d => ({ id: d.id, ...d.data() } as BazaarlyEvent)));
     setLoading(false);
-  }, []);
+  }, [user]);
 
   useEffect(() => { load(); }, [load]);
 
@@ -146,6 +149,7 @@ export function InventoryPage() {
   async function handleItemApproved(garmentItem: GarmentItem, payload: ApprovePayload) {
     const imageUrl = await mirrorItemImage(garmentItem.item_id);
     const docRef = await addDoc(collection(db, 'inventory'), {
+      userId: user!.uid,
       serviceItemId: garmentItem.item_id,
       price: payload.price,
       title: payload.title,

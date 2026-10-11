@@ -3,6 +3,7 @@ import {
   arrayRemove, arrayUnion, collection, addDoc, deleteDoc, getDocs, doc, updateDoc, query, where, orderBy, writeBatch,
 } from 'firebase/firestore';
 import { db } from '../lib/firebase';
+import { useAuth } from '../contexts/AuthContext';
 import type { BazaarlyEvent } from '../lib/types';
 import { Button } from '../components/ui/Button';
 import { EventCard } from '../components/events/EventCard';
@@ -22,6 +23,7 @@ interface EventsPageProps {
 }
 
 export function EventsPage({ selectedEvent, onSelectEvent, onCloseDashboard }: EventsPageProps) {
+  const { user } = useAuth();
   const [events, setEvents] = useState<BazaarlyEvent[]>([]);
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState('');
@@ -29,10 +31,10 @@ export function EventsPage({ selectedEvent, onSelectEvent, onCloseDashboard }: E
   const [showComparison, setShowComparison] = useState(false);
 
   const fetchEvents = useCallback(async () => {
-    const q = query(collection(db, 'events'), orderBy('date', 'desc'));
+    const q = query(collection(db, 'events'), where('userId', '==', user!.uid), orderBy('date', 'desc'));
     const snap = await getDocs(q);
     return snap.docs.map(d => ({ id: d.id, ...d.data() } as BazaarlyEvent));
-  }, []);
+  }, [user]);
 
   const loadEvents = useCallback(async () => {
     setLoading(true);
@@ -65,6 +67,7 @@ export function EventsPage({ selectedEvent, onSelectEvent, onCloseDashboard }: E
     const isPast = new Date(draft.date) < new Date();
     await addDoc(collection(db, 'events'), {
       ...draft,
+      userId: user!.uid,
       status: isPast ? 'past' : 'upcoming',
       inventoryIds: [],
       grossRevenue: 0,
@@ -137,6 +140,7 @@ export function EventsPage({ selectedEvent, onSelectEvent, onCloseDashboard }: E
       targetRef = doc(collection(db, 'events'));
       batch.set(targetRef, {
         ...newEvent,
+        userId: user!.uid,
         name: newEvent.name.trim(),
         status: 'upcoming',
         inventoryIds: unsoldItems.map(item => item.id),

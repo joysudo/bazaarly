@@ -5,6 +5,7 @@ import bubblelarge from '../../assets/bubblelarge.PNG';
 import bubblemedium from '../../assets/bubblemedium.PNG';
 import bubblesmall from '../../assets/bubblesmall.PNG';
 import { db } from '../../lib/firebase';
+import { useAuth } from '../../contexts/AuthContext';
 import { mirrorItemImage } from '../../lib/imageUtils';
 import {
   uploadFrame, getItem, approveItem, discardItem, retryItem, resolvePending,
@@ -154,6 +155,7 @@ function parsePriceStr(raw?: string | null): string {
 // ── Component ─────────────────────────────────────────────────────────────────
 
 export function ScanSessionModal({ open, onClose, events, onSessionComplete }: ScanSessionModalProps) {
+  const { user } = useAuth();
   // ─ Phase & scan state ─────────────────────────────────────────────────────
   const [phase, setPhase] = useState<Phase>('confirm');
   const [scanState, setScanState] = useState<ScanState>('idle');
@@ -650,6 +652,7 @@ export function ScanSessionModal({ open, onClose, events, onSessionComplete }: S
       const price    = parseFloat(draft.price) || 0;
       const title    = draft.title.trim() || draft.overview.slice(0, 60) || 'Untitled';
       const docRef   = await addDoc(collection(db, 'inventory'), {
+        userId:        user!.uid,
         serviceItemId: currentGarment.item_id,
         price, title,
         status: 'approved',
