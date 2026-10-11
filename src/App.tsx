@@ -3,9 +3,10 @@ import { TopNav } from './components/layout/TopNav';
 import { EventsPage } from './pages/EventsPage';
 import { InventoryPage } from './pages/InventoryPage';
 import { KioskPage } from './pages/KioskPage';
+import { SellerIntelligencePage } from './pages/SellerIntelligencePage';
 import type { BazaarlyEvent } from './lib/types';
 
-type View = 'events' | 'inventory' | 'kiosk';
+type View = 'events' | 'intelligence' | 'inventory' | 'kiosk';
 
 function App() {
   const [view, setView] = useState<View>('events');
@@ -30,7 +31,7 @@ function App() {
           onSelectEvent={setSelectedEvent}
           onCloseDashboard={() => setSelectedEvent(null)}
         />
-      ) : <InventoryPage />}
+      ) : view === 'intelligence' ? <SellerIntelligencePage /> : <InventoryPage />}
     </div>
   );
 }
