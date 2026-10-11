@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
 import { Button } from './Button';
 
 interface ModalProps {
@@ -12,33 +12,26 @@ interface ModalProps {
 export function Modal({ open, onClose, title, children, maxWidth = 560 }: ModalProps) {
   const [isExiting, setIsExiting] = useState(false);
 
-  // Reset exit state whenever the modal is freshly opened
-  useEffect(() => {
-    if (open) {
-      setIsExiting(false);
-    }
-  }, [open]);
+  const triggerClose = useCallback(() => {
+    if (isExiting) return;
 
-  // Handle Escape key
+    setIsExiting(true);
+    setTimeout(() => {
+      onClose();
+      setIsExiting(false);
+    }, 200);
+  }, [isExiting, onClose]);
+
   useEffect(() => {
     if (!open) return;
-    const handler = (e: KeyboardEvent) => { 
-      if (e.key === 'Escape') triggerClose(); 
+    const handler = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') triggerClose();
     };
     window.addEventListener('keydown', handler);
     return () => window.removeEventListener('keydown', handler);
-  }, [open]);
+  }, [open, triggerClose]);
 
-  // Intercept close to trigger exit animations first
-  const triggerClose = () => {
-    setIsExiting(true);
-    setTimeout(() => {
-      onClose(); // This tells the parent to set open={false} after the animation finishes
-    }, 200); // Matches the exit animation duration (in ms)
-  };
-
-  // Don't render anything if it's closed and not currently animating out
-  if (!open && !isExiting) return null;
+  if (!open) return null;
 
   return (
     <>
