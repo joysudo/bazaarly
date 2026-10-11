@@ -1,6 +1,6 @@
 import { Button } from '../ui/Button';
 
-type Tab = 'events' | 'inventory' | 'kiosk';
+type Tab = 'events' | 'intelligence' | 'inventory' | 'kiosk';
 
 interface TopNavProps {
   activeTab: Tab;
@@ -10,10 +10,11 @@ interface TopNavProps {
 export function TopNav({ activeTab, onTabChange }: TopNavProps) {
   return (
     <nav
+      className="top-nav"
       style={{
         background: 'var(--color-canvas)',
         borderBottom: '1px solid var(--color-hairline)',
-        height: 56,
+        minHeight: 56,
         display: 'flex',
         alignItems: 'center',
         position: 'sticky',
@@ -25,14 +26,16 @@ export function TopNav({ activeTab, onTabChange }: TopNavProps) {
         style={{
           maxWidth: 1280,
           margin: '0 auto',
-          padding: '0 var(--space-xxl)',
+          padding: '8px clamp(14px, 4vw, 48px)',
           width: '100%',
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'space-between',
+          flexWrap: 'wrap',
+          gap: 'var(--space-sm)',
         }}
       >
-        <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-lg)' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-lg)', flexWrap: 'wrap' }}>
           <span
             style={{
               fontWeight: 700,
@@ -43,11 +46,16 @@ export function TopNav({ activeTab, onTabChange }: TopNavProps) {
           >
             Bazaarly
           </span>
-          <div style={{ display: 'flex', gap: 'var(--space-xxs)' }}>
-            {(['events', 'inventory'] as const).map(tab => (
+          <div style={{ display: 'flex', gap: 'var(--space-xxs)', flexWrap: 'wrap' }}>
+            {([
+              ['events', 'Events'],
+              ['intelligence', 'Intelligence'],
+              ['inventory', 'Inventory'],
+            ] as const).map(([tab, label]) => (
               <button
                 key={tab}
                 onClick={() => onTabChange(tab)}
+                aria-current={activeTab === tab ? 'page' : undefined}
                 style={{
                   background: activeTab === tab ? 'var(--color-primary)' : 'transparent',
                   color: activeTab === tab ? 'var(--color-on-primary)' : 'var(--color-ink)',
@@ -58,11 +66,11 @@ export function TopNav({ activeTab, onTabChange }: TopNavProps) {
                   fontFamily: 'var(--font-sans)',
                   fontSize: 'var(--text-body-sm)',
                   fontWeight: 480,
-                  textTransform: 'capitalize',
+                  whiteSpace: 'nowrap',
                   transition: 'background 0.15s, color 0.15s',
                 }}
               >
-                {tab}
+                {label}
               </button>
             ))}
           </div>
@@ -70,7 +78,7 @@ export function TopNav({ activeTab, onTabChange }: TopNavProps) {
         <Button
           variant="primary"
           onClick={() => onTabChange('kiosk')}
-          style={{ fontSize: 'var(--text-body-sm)', padding: '7px 16px' }}
+          style={{ fontSize: 'var(--text-body-sm)', padding: '7px 16px', flexShrink: 0 }}
         >
           Customer Display
         </Button>

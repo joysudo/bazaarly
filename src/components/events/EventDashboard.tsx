@@ -96,7 +96,6 @@ export function EventDashboard({
   const itemsSold = Math.max(soldInventoryCount, itemsSoldFromSales);
   const availableInventoryCount = inventory.filter(item => item.status === 'approved').length;
   const transferableInventoryCount = inventory.filter(item => item.status !== 'sold').length;
-  const sellThrough = inventory.length > 0 ? Math.min(100, Math.round((itemsSold / inventory.length) * 100)) : 0;
   const net = event.grossRevenue - event.vendorFee;
   const averageSale = sales.length > 0 ? event.grossRevenue / sales.length : 0;
 
@@ -193,7 +192,7 @@ export function EventDashboard({
             <Stat label="Sales" value={dataLoading ? '…' : String(sales.length)} />
             <Stat label="Items sold" value={dataLoading ? '…' : String(itemsSold)} />
             <Stat label="Available" value={dataLoading ? '…' : String(availableInventoryCount)} />
-            <Stat label="Sell-through" value={dataLoading ? '…' : `${sellThrough}%`} />
+            <Stat label="Assigned now" value={dataLoading ? '…' : String(inventory.length)} />
           </div>
         </section>
 
