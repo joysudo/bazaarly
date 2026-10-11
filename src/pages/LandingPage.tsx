@@ -1,9 +1,9 @@
 import { useState } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 // import bazaarlylogo from '../assets/bazaarlylogo.png';
-import bubblelarge from '../assets/bubblelarge.png';
-import bubblemedium from '../assets/bubblemedium.png';
-import bubblesmall from '../assets/bubblesmall.png';
+// import bubblelarge from '../assets/bubblelarge.png';
+// import bubblemedium from '../assets/bubblemedium.png';
+// import bubblesmall from '../assets/bubblesmall.png';
 
 export function LandingPage() {
   const { signInWithGoogle } = useAuth();
@@ -40,19 +40,19 @@ export function LandingPage() {
 
       {/* Bubble decorations */}
       <img
-        src={bubblelarge} alt=""
+        src='https://ibb.co/mVzh18YQ' alt=""
         style={{ position: 'absolute', top: -120, right: -100, width: 480, opacity: 0.35, pointerEvents: 'none', userSelect: 'none' }}
       />
       <img
-        src={bubblemedium} alt=""
+        src='https://ibb.co/nNzQHgFP' alt=""
         style={{ position: 'absolute', bottom: -60, left: -60, width: 300, opacity: 0.3, pointerEvents: 'none', userSelect: 'none' }}
       />
       <img
-        src={bubblesmall} alt=""
+        src='https://ibb.co/8DF3hCYW' alt=""
         style={{ position: 'absolute', top: '55%', left: '5%', width: 100, opacity: 0.25, pointerEvents: 'none', userSelect: 'none' }}
       />
       <img
-        src={bubblesmall} alt=""
+        src='https://ibb.co/8DF3hCYW' alt=""
         style={{ position: 'absolute', bottom: '20%', right: '8%', width: 64, opacity: 0.2, pointerEvents: 'none', userSelect: 'none' }}
       />
 

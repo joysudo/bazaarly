@@ -1,9 +1,9 @@
 import { useState, useRef, useEffect } from 'react';
 import type { KeyboardEvent } from 'react';
 import { collection, addDoc, doc, deleteDoc, writeBatch, arrayUnion } from 'firebase/firestore';
-import bubblelarge from '../../assets/bubblelarge.png';
-import bubblemedium from '../../assets/bubblemedium.png';
-import bubblesmall from '../../assets/bubblesmall.png';
+// import bubblelarge from '../../assets/bubblelarge.png';
+// import bubblemedium from '../../assets/bubblemedium.png';
+// import bubblesmall from '../../assets/bubblesmall.png';
 import { db } from '../../lib/firebase';
 import { useAuth } from '../../contexts/AuthContext';
 import { mirrorItemImage } from '../../lib/imageUtils';
@@ -1000,17 +1000,17 @@ function renderConfirm() {
           {/* Decorative bubbles — fixed layer behind scrollable content */}
           <div style={{ position: 'absolute', inset: 0, pointerEvents: 'none', overflow: 'hidden', zIndex: 0 }}>
             <img
-              src={bubblelarge}
+              src='https://ibb.co/mVzh18YQ'
               alt=""
               style={{ position: 'absolute', top: -100, right: -80, width: 420, opacity: 0.45, userSelect: 'none' }}
             />
             <img
-              src={bubblemedium}
+              src='https://ibb.co/nNzQHgFP'
               alt=""
               style={{ position: 'absolute', bottom: -30, left: -50, width: 260, opacity: 0.4, userSelect: 'none' }}
             />
             <img
-              src={bubblesmall}
+              src='https://ibb.co/8DF3hCYW'
               alt=""
               style={{ position: 'absolute', top: '38%', right: '12%', width: 96, opacity: 0.32, userSelect: 'none' }}
             />
