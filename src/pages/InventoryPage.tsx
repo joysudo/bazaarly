@@ -14,7 +14,7 @@ import { UploadModal } from '../components/inventory/UploadModal';
 import { ScanSessionModal } from '../components/inventory/ScanSessionModal';
 import { ItemDetailModal } from '../components/inventory/ItemDetailModal';
 import MoltenMetal from '../components/ui/MoltenMetal';
-import catsit from '../assets/catsit.png';
+// import catsit from '../assets/catsit.png';
 
 type SortBy = 'newest' | 'oldest' | 'price-asc' | 'price-desc';
 
@@ -309,7 +309,7 @@ export function InventoryPage() {
         </div>
         <div style={{ position: 'relative', zIndex: 1, maxWidth: 1280, margin: '0 auto', padding: '0 var(--space-xl)', display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between', flexWrap: 'wrap', gap: 'var(--space-md)', pointerEvents: 'none'}}>
           <div style={{display: 'flex', gap: '2rem'}}>
-            <img src={catsit} style={{width: 'clamp(120px, 16vw, 200px)', objectFit: 'contain', marginTop: 'auto'}}/>
+            <img src='https://ibb.co/FkF7WLNs' style={{width: 'clamp(120px, 16vw, 200px)', objectFit: 'contain', marginTop: 'auto'}}/>
             <div style={{padding: 'var(--space-xxl) 0'}}>
               <div style={{ fontFamily: 'var(--font-mono)', fontSize: 'var(--text-eyebrow)', fontWeight: 400, letterSpacing: '0.54px', textTransform: 'uppercase', marginBottom: 'var(--space-xs)' }}>Inventory</div>
               <h1 style={{ margin: 0, fontSize: 'clamp(40px, 5vw, 64px)', fontWeight: 340, lineHeight: 1.1, letterSpacing: '-0.96px' }}>

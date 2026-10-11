@@ -12,7 +12,7 @@ import { EventDashboard } from '../components/events/EventDashboard';
 import { EventComparison } from '../components/events/EventComparison';
 import { AdviceChat } from '../components/advice/AdviceChat';
 import MoltenMetal from '../components/ui/MoltenMetal';
-import catstand from '../assets/catstand.png';
+// import catstand from '../assets/catstand.png';
 
 type EventDraft = Omit<BazaarlyEvent, 'id' | 'createdAt' | 'inventoryIds' | 'grossRevenue' | 'status'>;
 type NewEventDraft = Pick<EventDraft, 'name' | 'date' | 'description' | 'vendorFee'>;
@@ -230,7 +230,7 @@ export function EventsPage({ selectedEvent, onSelectEvent, onCloseDashboard }: E
           }}
         >
           <div style={{display: 'flex', gap: '2rem'}}>
-            <img src={catstand} style={{width: 'clamp(120px, 16vw, 200px)', objectFit: 'contain', marginTop: 'auto'}}/>
+            <img src='https://ibb.co/7NBwD4Tv' style={{width: 'clamp(120px, 16vw, 200px)', objectFit: 'contain', marginTop: 'auto'}}/>
             <div style={{padding: 'var(--space-xxl) 0'}}>
               <div
                 style={{
