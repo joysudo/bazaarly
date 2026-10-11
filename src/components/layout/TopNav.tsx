@@ -1,6 +1,6 @@
 import { Button } from '../ui/Button';
 
-type Tab = 'events' | 'intelligence' | 'inventory' | 'kiosk';
+type Tab = 'events' | 'inventory' | 'kiosk';
 
 interface TopNavProps {
   activeTab: Tab;
@@ -49,7 +49,6 @@ export function TopNav({ activeTab, onTabChange }: TopNavProps) {
           <div style={{ display: 'flex', gap: 'var(--space-xxs)', flexWrap: 'wrap' }}>
             {([
               ['events', 'Events'],
-              ['intelligence', 'Intelligence'],
               ['inventory', 'Inventory'],
             ] as const).map(([tab, label]) => (
               <button

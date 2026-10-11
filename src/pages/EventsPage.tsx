@@ -8,6 +8,7 @@ import { Button } from '../components/ui/Button';
 import { EventCard } from '../components/events/EventCard';
 import { CreateEventModal } from '../components/events/CreateEventModal';
 import { EventDashboard } from '../components/events/EventDashboard';
+import { EventComparison } from '../components/events/EventComparison';
 
 type EventDraft = Omit<BazaarlyEvent, 'id' | 'createdAt' | 'inventoryIds' | 'grossRevenue' | 'status'>;
 type NewEventDraft = Pick<EventDraft, 'name' | 'date' | 'description' | 'vendorFee'>;
@@ -21,16 +22,42 @@ interface EventsPageProps {
 export function EventsPage({ selectedEvent, onSelectEvent, onCloseDashboard }: EventsPageProps) {
   const [events, setEvents] = useState<BazaarlyEvent[]>([]);
   const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState('');
   const [showCreate, setShowCreate] = useState(false);
+  const [showComparison, setShowComparison] = useState(false);
 
-  const loadEvents = useCallback(async () => {
+  const fetchEvents = useCallback(async () => {
     const q = query(collection(db, 'events'), orderBy('date', 'desc'));
     const snap = await getDocs(q);
-    setEvents(snap.docs.map(d => ({ id: d.id, ...d.data() } as BazaarlyEvent)));
-    setLoading(false);
+    return snap.docs.map(d => ({ id: d.id, ...d.data() } as BazaarlyEvent));
   }, []);
 
-  useEffect(() => { loadEvents(); }, [loadEvents]);
+  const loadEvents = useCallback(async () => {
+    setLoading(true);
+    setLoadError('');
+    try {
+      setEvents(await fetchEvents());
+    } catch (error) {
+      setLoadError(error instanceof Error ? error.message : 'Could not load events.');
+    } finally {
+      setLoading(false);
+    }
+  }, [fetchEvents]);
+
+  useEffect(() => {
+    let active = true;
+    fetchEvents()
+      .then(loadedEvents => {
+        if (active) setEvents(loadedEvents);
+      })
+      .catch(error => {
+        if (active) setLoadError(error instanceof Error ? error.message : 'Could not load events.');
+      })
+      .finally(() => {
+        if (active) setLoading(false);
+      });
+    return () => { active = false; };
+  }, [fetchEvents]);
 
   async function handleCreate(draft: EventDraft) {
     const isPast = new Date(draft.date) < new Date();
@@ -207,6 +234,12 @@ export function EventsPage({ selectedEvent, onSelectEvent, onCloseDashboard }: E
           gap: 'var(--space-section)',
         }}
       >
+        {loadError && (
+          <div role="alert" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 'var(--space-md)', flexWrap: 'wrap', color: 'var(--color-accent-magenta)', fontSize: 'var(--text-body-sm)' }}>
+            <span>Could not refresh events: {loadError}</span>
+            <Button variant="tertiary" onClick={() => void loadEvents()}>Try again</Button>
+          </div>
+        )}
         {loading ? (
           <Mono>Loading events…</Mono>
         ) : (
@@ -233,7 +266,16 @@ export function EventsPage({ selectedEvent, onSelectEvent, onCloseDashboard }: E
 
             {past.length > 0 && (
               <section>
-                <Eyebrow>Past — {past.length}</Eyebrow>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 'var(--space-md)', flexWrap: 'wrap' }}>
+                  <Eyebrow>Past — {past.length}</Eyebrow>
+                  <Button
+                    variant="secondary"
+                    onClick={() => setShowComparison(true)}
+                    disabled={past.length < 2}
+                  >
+                    Compare completed events
+                  </Button>
+                </div>
                 <div
                   style={{
                     display: 'grid',
@@ -253,6 +295,9 @@ export function EventsPage({ selectedEvent, onSelectEvent, onCloseDashboard }: E
       </div>
 
       <CreateEventModal open={showCreate} onClose={() => setShowCreate(false)} onSubmit={handleCreate} />
+      {showComparison && (
+        <EventComparison events={past} onClose={() => setShowComparison(false)} />
+      )}
     </main>
   );
 }

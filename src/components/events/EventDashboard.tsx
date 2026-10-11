@@ -6,6 +6,7 @@ import { Modal } from '../ui/Modal';
 import { Button } from '../ui/Button';
 import { Badge } from '../ui/Badge';
 import { Input, TextArea } from '../ui/Input';
+import { EventAnalytics } from './EventAnalytics';
 import type { BazaarlyEvent, EventSale, InventoryItem } from '../../lib/types';
 
 interface EventDashboardProps {
@@ -89,15 +90,8 @@ export function EventDashboard({
 
   const inventory = currentDashboard?.inventory ?? [];
   const sales = currentDashboard?.sales ?? [];
-  const soldInventoryCount = inventory.filter(item => item.status === 'sold').length;
-  const itemsSoldFromSales = sales.reduce((total, sale) => (
-    total + (typeof sale.itemCount === 'number' ? sale.itemCount : Array.isArray(sale.items) ? sale.items.length : 0)
-  ), 0);
-  const itemsSold = Math.max(soldInventoryCount, itemsSoldFromSales);
   const availableInventoryCount = inventory.filter(item => item.status === 'approved').length;
   const transferableInventoryCount = inventory.filter(item => item.status !== 'sold').length;
-  const net = event.grossRevenue - event.vendorFee;
-  const averageSale = sales.length > 0 ? event.grossRevenue / sales.length : 0;
 
   async function handleAction(key: string, fn: () => Promise<void>) {
     setLoadingAction(key);
@@ -173,29 +167,6 @@ export function EventDashboard({
           )}
         </header>
 
-        <section aria-label="Event finances">
-          <SectionHeading>Finances · USD</SectionHeading>
-          <div style={{ ...statPanelStyle, background: 'var(--color-block-lime)' }}>
-            <Stat label="Gross revenue" value={money(event.grossRevenue)} />
-            <Stat label="Vendor fee" value={money(event.vendorFee)} />
-            <Stat label="Net" value={money(net)} color={net >= 0 ? 'var(--color-semantic-success)' : 'var(--color-accent-magenta)'} />
-            <Stat label="Average sale" value={sales.length > 0 ? money(averageSale) : '—'} />
-          </div>
-          <p style={{ margin: 'var(--space-sm) 0 0', fontSize: 11, opacity: 0.5 }}>
-            Net is gross revenue minus the vendor fee. Devnet test SOL is not converted to USD.
-          </p>
-        </section>
-
-        <section aria-label="Event performance">
-          <SectionHeading>Performance</SectionHeading>
-          <div style={{ ...statPanelStyle, background: 'var(--color-block-cream)' }}>
-            <Stat label="Sales" value={dataLoading ? '…' : String(sales.length)} />
-            <Stat label="Items sold" value={dataLoading ? '…' : String(itemsSold)} />
-            <Stat label="Available" value={dataLoading ? '…' : String(availableInventoryCount)} />
-            <Stat label="Assigned now" value={dataLoading ? '…' : String(inventory.length)} />
-          </div>
-        </section>
-
         {currentDashboard?.error && (
           <div role="alert" style={{ color: 'var(--color-accent-magenta)', fontSize: 'var(--text-body-sm)' }}>
             Could not load dashboard details: {currentDashboard.error}
@@ -204,6 +175,24 @@ export function EventDashboard({
             </Button>
           </div>
         )}
+
+        <section aria-label="Event analytics">
+          {dataLoading ? (
+            <p role="status" style={{ margin: 0, padding: 'var(--space-lg)', textAlign: 'center', opacity: 0.55, background: 'var(--color-surface-soft)', borderRadius: 'var(--radius-md)' }}>
+              Loading event analytics…
+            </p>
+          ) : (
+            <EventAnalytics event={event} sales={sales} inventory={inventory} />
+          )}
+        </section>
+
+        <section aria-label="Current inventory status">
+          <SectionHeading>Inventory status</SectionHeading>
+          <div style={{ ...statPanelStyle, background: 'var(--color-block-cream)' }}>
+            <Stat label="Available now" value={dataLoading ? '…' : String(availableInventoryCount)} />
+            <Stat label="Assigned now" value={dataLoading ? '…' : String(inventory.length)} />
+          </div>
+        </section>
 
         <section aria-label="Event inventory">
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', gap: 'var(--space-sm)', marginBottom: 'var(--space-sm)' }}>
