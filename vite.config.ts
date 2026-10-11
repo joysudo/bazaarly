@@ -5,13 +5,13 @@ import { defineConfig } from 'vite'
 export default defineConfig({
   plugins: [react()],
   // this is attempt proxy stuff joy has added
-  // server: {
-  //   proxy: {
-  //     '/vision-api': {
-  //       target: 'http://152.23.49.69:8000',
-  //       changeOrigin: true,
-  //       rewrite: (path) => path.replace(/^\/vision-api/, ''),
-  //     },
-  //   },
-  // },
+  server: {
+    proxy: {
+      '/vision-api': {
+        target: 'http://0.0.0.0:8000',
+        changeOrigin: true,
+        rewrite: (path) => path.replace(/^\/vision-api/, ''),
+      },
+    },
+  },
 })

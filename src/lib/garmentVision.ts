@@ -1,9 +1,10 @@
-import type { GarmentItem } from './types';
+import type { GarmentItem, Highlight } from './types';
 import type { ScanResult, ResolveResult, EchoResult } from './types';
 
 
-const BASE_URL = 'http://152.23.49.69:8000';
-// const BASE_URL = '/vision-api';
+// const BASE_URL = 'http://152.23.49.69:8000';
+// const BASE_URL = 'http://0.0.0.0:8000';
+const BASE_URL = '/vision-api';
 
 export function getSessionId(): string {
   let id = localStorage.getItem('garmentSessionId');
@@ -62,6 +63,18 @@ export const resolvePending = (pendingId: string, action: 'add' | 'dismiss') =>
 
 export function getItemImageUrl(itemId: string, viewIndex = 0): string {
   return `${BASE_URL}/items/${itemId}/image/${viewIndex}`;
+}
+
+// Returns the server's garment outline for a low-res preview frame.
+export async function fetchHighlight(blob: Blob): Promise<{ highlight: Highlight | null } | null> {
+  const form = new FormData();
+  form.append('image', blob, 'f.jpg');
+  const res = await fetch(`${BASE_URL}/scan/highlight`, { method: 'POST', body: form });
+  if (!res.ok) {
+    const body = await res.text();
+    throw new Error(`POST /scan/highlight -> ${res.status}: ${body.slice(0, 300)}`);
+  }
+  return res.json() as Promise<{ highlight: Highlight | null }>;
 }
 
 // Diagnostics

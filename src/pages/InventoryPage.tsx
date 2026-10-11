@@ -2,15 +2,14 @@ import React, { useState, useEffect, useCallback } from 'react';
 import {
   collection, addDoc, getDocs, doc, query, orderBy, writeBatch, arrayUnion, updateDoc,
 } from 'firebase/firestore';
-import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
-import { db, storage } from '../lib/firebase';
+import { db } from '../lib/firebase';
+import { mirrorItemImage } from '../lib/imageUtils';
 import type { BazaarlyEvent, GarmentItem, InventoryItem, ApprovePayload } from '../lib/types';
-import { getItemImageUrl } from '../lib/garmentVision';
 import { Button } from '../components/ui/Button';
 import { Modal } from '../components/ui/Modal';
 import { InventoryCard } from '../components/inventory/InventoryCard';
 import { UploadModal } from '../components/inventory/UploadModal';
-import { ScanPlaceholder } from '../components/inventory/ScanPlaceholder';
+import { ScanSessionModal } from '../components/inventory/ScanSessionModal';
 import { ItemDetailModal } from '../components/inventory/ItemDetailModal';
 
 export function InventoryPage() {
@@ -40,22 +39,8 @@ export function InventoryPage() {
 
   useEffect(() => { load(); }, [load]);
 
-  async function mirrorImage(serviceItemId: string): Promise<string> {
-    const sourceUrl = getItemImageUrl(serviceItemId);
-    try {
-      const res = await fetch(sourceUrl);
-      if (!res.ok) return sourceUrl;
-      const blob = await res.blob();
-      const storageRef = ref(storage, `inventory/${serviceItemId}/image.jpg`);
-      await uploadBytes(storageRef, blob, { contentType: blob.type || 'image/jpeg' });
-      return getDownloadURL(storageRef);
-    } catch {
-      return sourceUrl;
-    }
-  }
-
   async function handleItemApproved(garmentItem: GarmentItem, payload: ApprovePayload) {
-    const imageUrl = await mirrorImage(garmentItem.item_id);
+    const imageUrl = await mirrorItemImage(garmentItem.item_id);
     const docRef = await addDoc(collection(db, 'inventory'), {
       serviceItemId: garmentItem.item_id,
       price: payload.price,
@@ -226,7 +211,12 @@ export function InventoryPage() {
         onItemApproved={handleItemApproved}
       />
 
-      <ScanPlaceholder open={showScan} onClose={() => setShowScan(false)} />
+      <ScanSessionModal
+        open={showScan}
+        onClose={() => setShowScan(false)}
+        events={events}
+        onSessionComplete={() => { setShowScan(false); load(); }}
+      />
 
       {/* Bulk assign modal */}
       <Modal open={showAssign} onClose={() => setShowAssign(false)} title={`Assign ${selected.size} item${selected.size > 1 ? 's' : ''} to event`}>

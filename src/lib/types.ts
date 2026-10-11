@@ -88,6 +88,7 @@ export interface CartItem {
 export type Highlight = {
   bbox: [number, number, number, number];   // x, y, w, h, 0-1 of the frame
   outline: [number, number][];              // polygon points, 0-1 of the frame
+  mask_png?: string;                        // optional base64 PNG mask from server
 };
 
 // What POST /scan/frame returns. Switch on `result`.
