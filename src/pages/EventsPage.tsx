@@ -261,10 +261,10 @@ export function EventsPage({ selectedEvent, onSelectEvent, onCloseDashboard }: E
         style={{
           maxWidth: 1280,
           margin: '0 auto',
-          padding: 'var(--space-section) var(--space-xxl)',
+          padding: 'var(--space-xxl) var(--space-xxl)',
           display: 'flex',
           flexDirection: 'column',
-          gap: 'var(--space-section)',
+          gap: 'var(--space-xl)',
         }}
       >
         {loadError && (
@@ -299,12 +299,17 @@ export function EventsPage({ selectedEvent, onSelectEvent, onCloseDashboard }: E
 
             {past.length > 0 && (
               <section>
-                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 'var(--space-md)', flexWrap: 'wrap' }}>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 'var(--space-xs)', flexWrap: 'wrap' }}>
                   <Eyebrow>Past — {past.length}</Eyebrow>
                   <Button
                     variant="secondary"
                     onClick={() => setShowComparison(true)}
                     disabled={past.length < 2}
+                    style={{
+                      padding: '4px 12px',
+                      fontSize: 'var(--text-body)',
+                      minHeight: 'unset',
+                    }}
                   >
                     Compare completed events
                   </Button>
@@ -341,7 +346,7 @@ function Eyebrow({ children }: { children: React.ReactNode }) {
       style={{
         fontFamily: 'var(--font-mono)',
         fontSize: 'var(--text-eyebrow)',
-        fontWeight: 400,
+        fontWeight: 500,
         letterSpacing: '0.54px',
         textTransform: 'uppercase',
       }}
