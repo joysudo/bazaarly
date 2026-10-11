@@ -1,6 +1,9 @@
 import { useState, useRef, useEffect } from 'react';
 import type { KeyboardEvent } from 'react';
 import { collection, addDoc, doc, deleteDoc, writeBatch, arrayUnion } from 'firebase/firestore';
+import bubblelarge from '../../assets/bubblelarge.PNG';
+import bubblemedium from '../../assets/bubblemedium.PNG';
+import bubblesmall from '../../assets/bubblesmall.PNG';
 import { db } from '../../lib/firebase';
 import { mirrorItemImage } from '../../lib/imageUtils';
 import {
@@ -13,9 +16,9 @@ import { Input } from '../ui/Input';
 
 // ── Expert scanner constants ──────────────────────────────────────────────────
 const SCAN_INTERVAL_MS = 1500;  // min gap between scan attempts once still
-const STILL_MS         = 1000;  // garment must hold this long before a photo is taken
-const STILL_BOX        = 0.1;  // max outline edge drift (fraction of frame) that counts as still
-const STILL_DIFF       = 12;     // max mean pixel change inside garment that counts as still
+const STILL_MS         = 1500;  // garment must hold this long before a photo is taken
+const STILL_BOX        = 0.03;  // max outline edge drift (fraction of frame) that counts as still
+const STILL_DIFF       = 6;     // max mean pixel change inside garment that counts as still
 const HL_INTERVAL_MS   = 150;   // how often to poll /scan/highlight
 const FILL_ALPHA       = 0.05;  // mask fill opacity
 const STALE_MS         = 1500;  // hide overlay if server stops responding
@@ -826,11 +829,11 @@ function renderConfirm() {
         {/* Body */}
         <div style={{ flex: 1, display: 'flex', overflow: 'hidden' }}>
           {/* Left panel */}
-          <div style={{ width: 360, flexShrink: 0, borderRight: '1px solid var(--color-hairline)', display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
-            <div style={{ flexShrink: 0, overflowY: 'auto', maxHeight: '62%', padding: 'var(--space-lg)' }}>
+          <div style={{ width: 360, flexShrink: 0, borderRight: '1px solid var(--color-hairline)', display: 'flex', flexDirection: 'column', overflow: 'auto' }}>
+            <div style={{ flexShrink: 0, padding: 'var(--space-lg)' }}>
               {renderLeftPanelContent()}
             </div>
-            <div style={{ flex: 1, overflowY: 'auto', borderTop: '1px solid var(--color-hairline-soft)' }}>
+            <div style={{ flex: 1, borderTop: '1px solid var(--color-hairline-soft)' }}>
               <div style={{ padding: 'var(--space-md) var(--space-lg) var(--space-xs)' }}>
                 <span style={{ fontFamily: 'var(--font-mono)', fontSize: 10, textTransform: 'uppercase', letterSpacing: '0.5px', opacity: 0.4 }}>This Session</span>
               </div>
@@ -915,7 +918,7 @@ function renderConfirm() {
     if (!draft || !currentGarment) return null;
     return (
       <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-sm)' }}>
-        <div style={{ width: '100%', aspectRatio: '4/3', borderRadius: 'var(--radius-md)', overflow: 'hidden', background: 'var(--color-surface-soft)', marginBottom: 2 }}>
+        <div style={{ width: '100%', aspectRatio: '4/3', borderRadius: 'var(--radius-md)', background: 'var(--color-surface-soft)', marginBottom: 2 }}>
           <img src={getItemImageUrl(currentGarment.item_id)} alt="Item" style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }} onError={e => { (e.target as HTMLImageElement).style.opacity = '0'; }} />
         </div>
         <input value={draft.title} onChange={e => setDraft(d => d ? { ...d, title: e.target.value } : d)} placeholder="Item name…" style={{ fontFamily: 'var(--font-sans)', fontSize: 'var(--text-card-title)', fontWeight: 700, border: 'none', outline: 'none', background: 'transparent', color: 'var(--color-ink)', width: '100%', padding: 0, lineHeight: 1.3 }} />
@@ -978,6 +981,7 @@ function renderConfirm() {
   function renderWrapup() {
     return (
       <>
+        {/* Header */}
         <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-md)', padding: '0 var(--space-xl)', height: 56, borderBottom: '1px solid var(--color-hairline)', flexShrink: 0 }}>
           <span style={{ fontFamily: 'var(--font-mono)', fontSize: 11, textTransform: 'uppercase', letterSpacing: '0.6px', opacity: 0.45 }}>Session Summary</span>
           <span style={{ fontFamily: 'var(--font-mono)', fontSize: 11, textTransform: 'uppercase', letterSpacing: '0.4px', background: 'var(--color-block-lime)', padding: '2px 10px', borderRadius: 'var(--radius-pill)' }}>
@@ -986,29 +990,78 @@ function renderConfirm() {
           <div style={{ flex: 1 }} />
           <Button variant="secondary" onClick={() => setPhase('scanning')} style={{ fontSize: 'var(--text-body-sm)' }}>← Back to scanning</Button>
         </div>
-        <div style={{ flex: 1, overflowY: 'auto', padding: 'var(--space-xl)' }}>
-          {sessionItems.length === 0 ? (
-            <div style={{ textAlign: 'center', padding: 'var(--space-section)', opacity: 0.4 }}>
-              <p style={{ fontSize: 'var(--text-body-sm)', margin: 0 }}>No items approved in this session.</p>
-            </div>
-          ) : (
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(160px, 1fr))', gap: 'var(--space-md)', marginBottom: 'var(--space-xl)' }}>
-              {sessionItems.map(item => (
-                <WrapupCard key={item.firestoreId} item={item} onDelete={() => deleteSessionItem(item)} />
-              ))}
-            </div>
-          )}
-          <div style={{ maxWidth: 480, borderTop: '1px solid var(--color-hairline-soft)', paddingTop: 'var(--space-lg)' }}>
-            <label style={{ display: 'block', fontSize: 'var(--text-body-sm)', fontWeight: 480, letterSpacing: '-0.14px', marginBottom: 6 }}>Assign to event (optional)</label>
-            <select value={assignEventId} onChange={e => setAssignEventId(e.target.value)} style={{ fontFamily: 'var(--font-sans)', fontSize: 'var(--text-body-sm)', background: 'var(--color-canvas)', color: 'var(--color-ink)', border: '1.5px solid var(--color-hairline)', borderRadius: 'var(--radius-md)', padding: '10px 12px', width: '100%', outline: 'none', cursor: 'pointer' }}>
-              <option value="">No event</option>
-              {events.map(ev => <option key={ev.id} value={ev.id}>{ev.name}{ev.status === 'past' ? ' (past)' : ''}</option>)}
-            </select>
-            <div style={{ display: 'flex', gap: 'var(--space-sm)', justifyContent: 'flex-end', marginTop: 'var(--space-lg)' }}>
-              <Button variant="secondary" onClick={handleClose} style={{ fontSize: 'var(--text-body-sm)' }}>Discard session</Button>
-              <Button variant="primary" onClick={handleWrapup} disabled={wrapping} style={{ fontSize: 'var(--text-body-sm)' }}>
-                {wrapping ? 'Saving…' : assignEventId ? 'Save & assign to event' : 'Save & close'}
-              </Button>
+
+        {/* Body */}
+        <div style={{ flex: 1, position: 'relative', overflow: 'hidden' }}>
+
+          {/* Decorative bubbles — fixed layer behind scrollable content */}
+          <div style={{ position: 'absolute', inset: 0, pointerEvents: 'none', overflow: 'hidden', zIndex: 0 }}>
+            <img
+              src={bubblelarge}
+              alt=""
+              style={{ position: 'absolute', top: -100, right: -80, width: 420, opacity: 0.45, userSelect: 'none' }}
+            />
+            <img
+              src={bubblemedium}
+              alt=""
+              style={{ position: 'absolute', bottom: -30, left: -50, width: 260, opacity: 0.4, userSelect: 'none' }}
+            />
+            <img
+              src={bubblesmall}
+              alt=""
+              style={{ position: 'absolute', top: '38%', right: '12%', width: 96, opacity: 0.32, userSelect: 'none' }}
+            />
+          </div>
+
+          {/* Scrollable centered content */}
+          <div style={{ position: 'relative', zIndex: 1, height: '100%', overflowY: 'auto', display: 'flex', justifyContent: 'center' }}>
+            <div style={{ width: '100%', maxWidth: 760, padding: 'var(--space-xxl) var(--space-xl)' }}>
+
+              {/* Hero heading */}
+              <div style={{ textAlign: 'center', marginBottom: 'var(--space-xxl)' }}>
+                <div style={{ width: 44, height: 44, borderRadius: '50%', background: 'var(--color-block-lime)', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto var(--space-md)', fontSize: 22 }}>
+                  ✓
+                </div>
+                <h2 style={{ margin: '0 0 var(--space-xs)', fontSize: 'clamp(28px, 4vw, 40px)', fontWeight: 340, letterSpacing: '-0.7px', lineHeight: 1.1 }}>
+                  Session complete
+                </h2>
+                <p style={{ margin: 0, fontSize: 'var(--text-body-sm)', opacity: 0.5 }}>
+                  {sessionItems.length === 0
+                    ? 'No items were approved in this session.'
+                    : `${sessionItems.length} item${sessionItems.length !== 1 ? 's' : ''} added to your inventory`}
+                </p>
+              </div>
+
+              {/* Item grid */}
+              {sessionItems.length > 0 && (
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(160px, 1fr))', gap: 'var(--space-md)', marginBottom: 'var(--space-xxl)' }}>
+                  {sessionItems.map(item => (
+                    <WrapupCard key={item.firestoreId} item={item} onDelete={() => deleteSessionItem(item)} />
+                  ))}
+                </div>
+              )}
+
+              {/* Event assignment + actions */}
+              <div style={{ maxWidth: 480, margin: '0 auto', borderTop: '1px solid var(--color-hairline-soft)', paddingTop: 'var(--space-xl)' }}>
+                <label style={{ display: 'block', fontSize: 'var(--text-body-sm)', fontWeight: 480, letterSpacing: '-0.14px', marginBottom: 8 }}>
+                  Assign all to an event <span style={{ opacity: 0.4, fontWeight: 400 }}>(optional)</span>
+                </label>
+                <select
+                  value={assignEventId}
+                  onChange={e => setAssignEventId(e.target.value)}
+                  style={{ fontFamily: 'var(--font-sans)', fontSize: 'var(--text-body-sm)', background: 'var(--color-canvas)', color: 'var(--color-ink)', border: '1.5px solid var(--color-hairline)', borderRadius: 'var(--radius-md)', padding: '10px 12px', width: '100%', outline: 'none', cursor: 'pointer' }}
+                >
+                  <option value="">No event</option>
+                  {events.map(ev => <option key={ev.id} value={ev.id}>{ev.name}{ev.status === 'past' ? ' (past)' : ''}</option>)}
+                </select>
+                <div style={{ display: 'flex', gap: 'var(--space-sm)', justifyContent: 'flex-end', marginTop: 'var(--space-lg)', paddingBottom: 'var(--space-xxl)' }}>
+                  <Button variant="secondary" onClick={handleClose} style={{ fontSize: 'var(--text-body-sm)' }}>Discard session</Button>
+                  <Button variant="primary" onClick={handleWrapup} disabled={wrapping} style={{ fontSize: 'var(--text-body-sm)' }}>
+                    {wrapping ? 'Saving…' : assignEventId ? 'Save & assign to event' : 'Save & close'}
+                  </Button>
+                </div>
+              </div>
+
             </div>
           </div>
         </div>
