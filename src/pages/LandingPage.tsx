@@ -1,9 +1,9 @@
 import { useState } from 'react';
 import { useAuth } from '../contexts/AuthContext';
-import bazaarlylogo from '../assets/bazaarlylogo.PNG';
-import bubblelarge from '../assets/bubblelarge.PNG';
-import bubblemedium from '../assets/bubblemedium.PNG';
-import bubblesmall from '../assets/bubblesmall.PNG';
+import bazaarlylogo from '../assets/bazaarlylogo.png';
+import bubblelarge from '../assets/bubblelarge.png';
+import bubblemedium from '../assets/bubblemedium.png';
+import bubblesmall from '../assets/bubblesmall.png';
 
 export function LandingPage() {
   const { signInWithGoogle } = useAuth();

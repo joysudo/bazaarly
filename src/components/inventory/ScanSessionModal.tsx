@@ -1,9 +1,9 @@
 import { useState, useRef, useEffect } from 'react';
 import type { KeyboardEvent } from 'react';
 import { collection, addDoc, doc, deleteDoc, writeBatch, arrayUnion } from 'firebase/firestore';
-import bubblelarge from '../../assets/bubblelarge.PNG';
-import bubblemedium from '../../assets/bubblemedium.PNG';
-import bubblesmall from '../../assets/bubblesmall.PNG';
+import bubblelarge from '../../assets/bubblelarge.png';
+import bubblemedium from '../../assets/bubblemedium.png';
+import bubblesmall from '../../assets/bubblesmall.png';
 import { db } from '../../lib/firebase';
 import { useAuth } from '../../contexts/AuthContext';
 import { mirrorItemImage } from '../../lib/imageUtils';

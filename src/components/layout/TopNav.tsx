@@ -2,7 +2,7 @@ import { useState, useRef, useEffect } from 'react';
 import type { User } from 'firebase/auth';
 import { useAuth } from '../../contexts/AuthContext';
 import { Button } from '../ui/Button';
-import bazaarlylogo from '../../assets/bazaarlylogo.PNG';
+import bazaarlylogo from '../../assets/bazaarlylogo.png';
 
 type Tab = 'events' | 'inventory' | 'kiosk';
 
