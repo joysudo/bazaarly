@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import type { InventoryItem } from '../../lib/types';
 
 interface InventoryCardProps {
@@ -6,10 +7,12 @@ interface InventoryCardProps {
   selected?: boolean;
   onSelect?: (e: React.MouseEvent) => void;
   onClick?: () => void;
+  onDelete?: (e: React.MouseEvent) => void;
 }
 
-export function InventoryCard({ item, eventName, selected, onSelect, onClick }: InventoryCardProps) {
+export function InventoryCard({ item, eventName, selected, onSelect, onClick, onDelete }: InventoryCardProps) {
   const isSold = item.status === 'sold';
+  const [hovered, setHovered] = useState(false);
 
   return (
     <div
@@ -23,11 +26,11 @@ export function InventoryCard({ item, eventName, selected, onSelect, onClick }: 
         transition: 'border-color 0.15s, box-shadow 0.15s',
         position: 'relative',
       }}
-      onMouseEnter={e => (e.currentTarget.style.boxShadow = '0 4px 16px rgba(0,0,0,0.06)')}
-      onMouseLeave={e => (e.currentTarget.style.boxShadow = 'none')}
+      onMouseEnter={e => { e.currentTarget.style.boxShadow = '0 4px 16px rgba(0,0,0,0.06)'; setHovered(true); }}
+      onMouseLeave={e => { e.currentTarget.style.boxShadow = 'none'; setHovered(false); }}
     >
       {/* Checkbox */}
-      {onSelect && !isSold && (
+      {onSelect && (
         <div
           onClick={onSelect}
           style={{
@@ -47,6 +50,23 @@ export function InventoryCard({ item, eventName, selected, onSelect, onClick }: 
         <div style={{ position: 'absolute', top: 8, right: 8, zIndex: 1, background: 'var(--color-block-navy)', color: 'var(--color-inverse-ink)', fontFamily: 'var(--font-mono)', fontSize: 10, textTransform: 'uppercase', letterSpacing: '0.5px', padding: '2px 8px', borderRadius: 'var(--radius-pill)' }}>
           Sold
         </div>
+      )}
+
+      {/* Trash icon — hover reveal */}
+      {onDelete && hovered && (
+        <button
+          onClick={e => { e.stopPropagation(); onDelete(e); }}
+          style={{
+            position: 'absolute', top: 8, right: 8, zIndex: 2,
+            background: 'rgba(0,0,0,0.55)', border: 'none', borderRadius: 6,
+            width: 28, height: 28, display: 'flex', alignItems: 'center', justifyContent: 'center',
+            cursor: 'pointer', color: 'white', fontSize: 14, lineHeight: 1,
+            backdropFilter: 'blur(2px)',
+          }}
+          title="Delete item"
+        >
+          🗑
+        </button>
       )}
 
       {/* Image */}
