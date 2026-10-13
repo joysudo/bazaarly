@@ -1,13 +1,16 @@
 # Bazaarly
 
-Bazaarly is a React + TypeScript dashboard for pop-up events, garment inventory, and kiosk sales.
+Bazaarly is a React + TypeScript dashboard for pop-up events, garment inventory, and kiosk sales. Watch the demo:
+
+[![Watch the video](https://img.youtube.com/vi/WMN7R4U3_cA/0.jpg)](https://www.youtube.com/watch?v=WMN7R4U3_cA)
 
 ## Local development
 
 1. Install dependencies with `npm install`.
 2. Copy `.env.example` to `.env.local`.
 3. Start the Solana checkout app from the `solana-pay-checkout` repo. It listens on `http://localhost:5174/`.
-4. Start Bazaarly with `npm run dev`.
+4. Start the computer vision functionality from the `Bazaarly_Vision_Service` repo. It listens on `http://localhost:8000/`.
+5. Start Bazaarly with `npm run dev`.
 
 Customer Display embeds the Solana checkout in a modal and passes the selected event and inventory document IDs. Keep the modal open until the receipt appears so the checkout can confirm payment and record the sale. The checkout reads current item prices from Firestore and records a sale only after a Solana Devnet payment is confirmed. The demo requests a fixed `0.01 SOL`; event revenue is recorded in USD from the inventory prices. The modal also offers a separate-tab fallback; the payment QR is intended to be scanned by a wallet on another device.
 
@@ -21,7 +24,7 @@ From an event dashboard, transfer all unsold inventory to another upcoming event
 
 Dashboard data is loaded from the existing shared Firestore collections. This app currently has no seller sign-in or seller-scoped data filtering; configure and verify Firestore security rules before using it with multiple sellers or real customer data. Solana payment records are Devnet demo transactions, and “revenue after vendor fee” is not profit.
 
-See the Solana checkout repo's README for payment configuration and behavior.
+See the Solana checkout and computer vision repos' README for configuration and behavior.
 
 ## Build and lint
 
